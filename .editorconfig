@@ -1,0 +1,18 @@
+# 编辑器/工具统一规范 —— 让所有成员的 VSCode 行为一致
+# 建议所有成员安装 VSCode 插件: EditorConfig + Prettier + ESLint + Volar(Vue3)
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{json,yml,yaml}]
+indent_size = 2
