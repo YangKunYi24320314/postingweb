@@ -22,3 +22,25 @@ RESTful 风格：​ 获取列表用 GET /posts，创建用 POST /posts，删除
 
 五、 Git 与协作流程
 分支策略：​ main 分支受保护，禁止直接推送。每人从 develop 拉取自己的功能分支，开发完后提 Pull Request (PR)，由你或其他组员 Code Review​ 后才能合并。
+
+
+UI统一规范
+1. 强制引入“UI组件库”
+不要自己写按钮、输入框、弹窗的样式。直接全局安装 Element Plus（Vue 3 生态最成熟，AI最熟悉，组件最全）。
+规则：​ 所有人禁止使用原生 <button> 或 <input>，必须统一使用 Element Plus 的 <el-button>、<el-input> 等组件。
+
+3. 使用“全局样式变量”（Design Tokens）
+规则：​ 禁止在单个 .vue 文件里写死颜色（如 color: red），必须引用全局变量（如 color: var(--primary-color)）。
+AI指令：​ 告诉AI：“写样式时，只能使用项目全局CSS变量，不要自定义新颜色。”
+
+5. 统一“AI写前端代码”的Prompt模板
+使用固定的话术模板复制给AI：
+统一Prompt模板：
+“请使用 Vue 3 + Element Plus 帮我写这个组件。要求：
+只使用 el- 开头的组件（如 el-card, el-button）；
+样式用 scoped style，使用全局CSS变量（如 var(--primary-color)）；
+不要写任何内联样式（style="..."）；
+组件结构要简洁，注释用中文。”
+
+7. 锁定页面布局骨架
+规则：​ 组员开发时，必须直接套用当前PM写的布局组件，不允许自己重新搭框架。
