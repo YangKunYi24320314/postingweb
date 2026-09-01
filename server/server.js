@@ -1,27 +1,38 @@
-// 引入 express
-const express = require('express');
-// 引入 cors
-const cors = require('cors');
-// 引入 dotenv 并配置
-require('dotenv').config();
+// 后端入口：组装中间件 + 挂载各模块路由。
+// 每个功能模块一个文件，放在 routes/ 里，在这里 app.use 挂载即可。
+const express = require('express')
+const cors = require('cors')
+require('dotenv').config()
 
-// 创建 express 应用
-const app = express();
+const { ok, fail, CODE } = require('./utils/response')
+const authRoutes = require('./routes/auth')
 
-// 中间件：让服务器能解析 JSON 格式的请求体
-app.use(express.json());
-// 中间件：启用 cors，允许前端跨域访问
-app.use(cors());
+const app = express()
 
-// 定义一个简单的测试接口
+// 让服务器能解析 JSON 请求体、允许前端跨域访问
+app.use(express.json())
+app.use(cors())
+
+// 简单连通性测试
 app.get('/api/hello', (req, res) => {
-  res.json({ message: 'Hello from backend!' });
-});
+  ok(res, { message: 'Hello from backend!' })
+})
 
-// 从环境变量取端口，没有就用 3000
-const PORT = process.env.PORT || 3000;
+// 挂载各模块路由：/api/auth/...
+app.use('/api/auth', authRoutes)
 
-// 启动服务器
+// 没匹配到任何路由 → 404
+app.use((req, res) => {
+  fail(res, CODE.NOT_FOUND, '接口不存在', 404)
+})
+
+// 统一错误处理：任何 async 路由抛错都会走到这里（Express 5 自动捕获）
+app.use((err, req, res, next) => {
+  console.error(err)
+  fail(res, CODE.SERVER_ERROR, '服务器内部错误', 500)
+})
+
+const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+  console.log(`Server is running on port ${PORT}`)
+})
