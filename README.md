@@ -40,7 +40,7 @@ RESTful 风格：​ 获取列表用 GET /posts，创建用 POST /posts，删除
 
 五、 Git 与协作流程
 
-分支策略：​ main 分支受保护，禁止直接推送。每人从 develop 拉取自己的功能分支，开发完后提 Pull Request (PR)，由你或其他组员 Code Review​ 后才能合并。
+分支策略：​ main 分支受保护，禁止直接推送。每人从 develop 拉取自己的功能分支，开发完后提 Pull Request (PR)，由其他组员 Code Review​ 后才能合并。
 
 
 
