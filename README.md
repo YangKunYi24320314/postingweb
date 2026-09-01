@@ -47,20 +47,20 @@ RESTful 风格：​ 获取列表用 GET /posts，创建用 POST /posts，删除
 UI统一规范
 
 1. 强制引入“UI组件库”
-2. 
+
 不要自己写按钮、输入框、弹窗的样式。直接全局安装 Element Plus（Vue 3 生态最成熟，AI最熟悉，组件最全）。
 
 规则：​ 所有人禁止使用原生 <button> 或 <input>，必须统一使用 Element Plus 的 <el-button>、<el-input> 等组件。
 
 
-4. 使用“全局样式变量”（Design Tokens）
+2. 使用“全局样式变量”（Design Tokens）
 
 规则：​ 禁止在单个 .vue 文件里写死颜色（如 color: red），必须引用全局变量（如 color: var(--primary-color)）。
 
 AI指令：​ 告诉AI：“写样式时，只能使用项目全局CSS变量，不要自定义新颜色。”
 
 
-6. 统一“AI写前端代码”的Prompt模板
+3. 统一“AI写前端代码”的Prompt模板
 
 使用固定的话术模板复制给AI：
 
@@ -72,6 +72,6 @@ AI指令：​ 告诉AI：“写样式时，只能使用项目全局CSS变量，
 组件结构要简洁，注释用中文。”
 
 
-8. 锁定页面布局骨架
+4. 锁定页面布局骨架
 
 规则：​ 组员开发时，必须直接套用当前PM写的布局组件，不允许自己重新搭框架。
