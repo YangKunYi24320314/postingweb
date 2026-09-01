@@ -9,7 +9,8 @@
 erDiagram
     USERS ||--o{ POSTS : "发布 posts"
     USERS ||--o{ COMMENTS : "发表 comments"
-    USERS ||--o{ POST_LIKES : "点赞"
+    USERS ||--o{ POST_LIKES : "点赞帖子"
+    USERS ||--o{ COMMENT_LIKES : "点赞评论"
     USERS ||--o{ FAVORITES : "收藏"
     USERS ||--o{ HISTORIES : "浏览"
     USERS ||--o{ USER_TAG_PREF : "偏好(可选)"
@@ -23,6 +24,7 @@ erDiagram
     POSTS ||--o{ HISTORIES : ""
 
     COMMENTS ||--o{ COMMENTS : "回复(楼中楼,可选)"
+    COMMENTS ||--o{ COMMENT_LIKES : ""
 ```
 
 **关系图例**：`||--o{` = 左边一条，右边多条（一对多）。
@@ -53,6 +55,10 @@ erDiagram
 | name | VARCHAR(50) | 唯一,非空 | 分类名 |
 | description | VARCHAR(200) | 可空 | 说明 |
 | sort_order | INT | 默认 0 | 排序 |
+| created_at | TIMESTAMPTZ | 默认 now() | |
+| updated_at | TIMESTAMPTZ | 默认 now() | |
+
+> 分类种子数据（5 个）：随便聊聊 / 校园生活 / 学习交流 / 二手交易 / 社团活动。
 
 ### posts — 帖子表
 | 字段 | 类型 | 约束 | 说明 |
@@ -68,7 +74,7 @@ erDiagram
 | comment_count | INT | 默认 0 | 评论数(冗余) |
 | is_pinned | BOOLEAN | 默认 false | 置顶 |
 | is_deleted | BOOLEAN | 默认 false | 软删除 |
-| status | SMALLINT | 默认 1 | 状态 |
+| status | SMALLINT | 默认 1 | 1=正常(默认) 0=隐藏 2=官方推荐(预留) |
 | created_at | TIMESTAMPTZ | 默认 now() | |
 | updated_at | TIMESTAMPTZ | 默认 now() | |
 
@@ -77,6 +83,10 @@ erDiagram
 |------|------|------|------|
 | id | BIGINT | PK,自增 | |
 | name | VARCHAR(50) | 唯一,非空 | 标签名 |
+| created_at | TIMESTAMPTZ | 默认 now() | |
+| updated_at | TIMESTAMPTZ | 默认 now() | |
+
+> 标签种子数据（10 个）：考研 / 自习室 / 课程 / 食堂 / 社团 / 二手 / 求助 / 组队 / 活动 / 经验分享。
 
 ### post_tags — 帖子与标签（多对多）
 | 字段 | 类型 | 约束 | 说明 |
@@ -95,7 +105,7 @@ erDiagram
 | user_id | BIGINT | FK→users,非空 | 评论者 |
 | parent_id | BIGINT | FK→comments,可空 | 回复哪条(楼中楼) |
 | content | TEXT | 非空 | 内容 |
-| like_count | INT | 默认 0 | 评论点赞数(可选) |
+| like_count | INT | 默认 0 | 评论点赞数（点赞记录见 comment_likes） |
 | status | SMALLINT | 默认 1 | 1=正常 0=删除 |
 | created_at | TIMESTAMPTZ | 默认 now() | |
 | updated_at | TIMESTAMPTZ | 默认 now() | |
@@ -108,6 +118,15 @@ erDiagram
 | post_id | BIGINT | FK→posts,非空 | |
 | created_at | TIMESTAMPTZ | 默认 now() | |
 | （唯一约束 user_id + post_id，防止重复点赞） | | | |
+
+### comment_likes — 评论点赞表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | BIGINT | PK,自增 | |
+| user_id | BIGINT | FK→users,非空 | 点赞者 |
+| comment_id | BIGINT | FK→comments,非空 | 被点赞的评论 |
+| created_at | TIMESTAMPTZ | 默认 now() | |
+| （唯一约束 user_id + comment_id，防止重复点赞） | | | |
 
 ### favorites — 收藏表
 | 字段 | 类型 | 约束 | 说明 |
@@ -127,6 +146,8 @@ erDiagram
 | user_id | BIGINT | FK→users,非空 | |
 | post_id | BIGINT | FK→posts,非空 | |
 | viewed_at | TIMESTAMPTZ | 默认 now() | |
+| created_at | TIMESTAMPTZ | 默认 now() | |
+| updated_at | TIMESTAMPTZ | 默认 now() | |
 | （唯一约束 user_id + post_id，同一帖子只留一条，重复浏览刷时间） | | | |
 
 ## 六、推荐算法（可选，二期）
@@ -148,3 +169,4 @@ erDiagram
 3. **唯一约束防重复**：点赞、收藏靠 `UNIQUE` 拦重复；浏览记录靠 `UNIQUE(user_id, post_id)` 让同一帖子只留一条。
 4. **外键删帖级联**：删帖子时其点赞/收藏/评论/标签关联一起清（`ON DELETE CASCADE`）。
 5. **时间统一用 TIMESTAMPTZ**，存 `now()`，前端再按需格式化。
+6. **可执行脚本**：`docs/campushub_schema.sql` 是这套结构的可直接执行版本（含索引、CHECK 约束、种子数据），文档与脚本必须保持一致。

@@ -1,77 +1,102 @@
-# postingweb
-一、 时间与范围限制（MVP原则）
+# PostWEB · 校园发帖社区
 
-规则：​ 只做核心链路。如果时间不够，功能降级。
+一个给大学校园用的**发帖社区论坛** Web 应用。5 名新手在一门 6 天的短学期课程里从零协作开发。
 
-限制：​ 讨论ER图和接口时，任何人提出的新字段或新接口，只要不在核心链路上，一律记录但不做。先保证项目能跑通，再谈优化。
+> **给 AI 的说明书在 [`AGENTS.md`](./AGENTS.md)**，新开 AI 会话请先读它。
+> 给团队的正式契约在 [`docs/`](./docs/) 目录，改代码前务必先读。
 
+---
 
-二、 数据库 ER 图设计规则
+## 功能模块
 
-命名规范：​ 表名统一用复数（如 users, posts），字段名统一用蛇形命名法（如 created_at, user_id），全小写。
+1. 用户与认证（注册 / 登录 / 个人信息）
+2. 帖子核心（发布 / 删除 / 筛选 / 搜索）
+3. 互动系统（评论 / 点赞 / 收藏）
+4. 记录中心（浏览历史 / 个人记录）
+5. 推荐（可选，基于标签的简化推荐，二期）
 
-强制字段：​ 每张表必须有 id (主键)、created_at、updated_at。
+## 技术栈
 
-关系清晰：​ 必须明确外键。例如：一个用户有多篇文章，一篇文章有多个评论。
+| 端 | 技术 | 端口 |
+|----|------|------|
+| 前端 | Vue 3 + Vite + Element Plus | 5173 |
+| 后端 | Node.js + Express | 3000 |
+| 数据库 | PostgreSQL | 5432 |
+| 文档/联调 | Apifox（团队：PostWEB） | — |
 
-限制：​ 禁止使用数据库存储过程或复杂触发器，所有逻辑在 Node.js 代码里处理，降低调试难度。
+## 目录结构
 
+```
+postingweb/
+├── client/      # 前端（Vue3 + Vite，独立 npm 包）
+├── server/      # 后端（Express，独立 npm 包）
+├── docs/        # 契约文档（ER图 / 接口协议 / OpenAPI）
+└── AGENTS.md    # ★ AI 协作说明书（新 AI 会话先读它）
+```
 
-三、 接口文档规范（Apifox）
+## 快速开始
 
-统一响应格式：​ 约定一个固定的返回体结构。
+**前端（client/）**
+```bash
+npm install
+npm run dev      # http://localhost:5173
+```
 
-RESTful 风格：​ 获取列表用 GET /posts，创建用 POST /posts，删除用 DELETE /posts/:id。
+**后端（server/）**
+```bash
+npm install
+npm run dev      # http://localhost:3000
+```
 
-错误码约定：​ 简单约定几个（200成功，400参数错，401未登录，500服务器错）。
+前后端是两个独立 npm 包，各自启动。前端通过 `/api/...` 访问后端，跨域由后端 `cors` 放开；数据库通过 `pg` 连接（当前**还未建表、无 `.env`**）。
 
-限制：​ 组员开发时必须严格对照 Apifox，不允许私自改字段名。
+## 文档与契约（权威来源）
 
+| 文件 | 作用 |
+|------|------|
+| [`docs/database-schema.md`](./docs/database-schema.md) | ER 图 + 表结构，**唯一表结构权威** |
+| [`docs/api-protocol.md`](./docs/api-protocol.md) | 接口协议，**唯一接口权威** |
+| [`docs/openapi.yaml`](./docs/openapi.yaml) | 可直接导入 Apifox 的 OpenAPI 规范 |
+| [`AGENTS.md`](./AGENTS.md) | 给 AI 助手的项目说明 |
 
-四、 AI 辅助开发与代码规范（重点协调）
+---
 
-统一格式化：​ 所有人必须在编辑器安装 Prettier​ 和 ESLint，并设置保存时自动格式化。提交代码前必须格式化，避免AI生成的缩进/引号不统一导致Git冲突满天飞。
+## 团队规范（全员守则）
 
-“AI代码审查”规则：​ 不允许直接复制粘贴AI生成的整段代码。让AI写代码时，必须让AI加上注释，且你自己必须能向队友解释这段代码是干什么的。
+### 一、范围与时间限制（MVP 原则）
 
-组件/函数命名：​ 前端Vue组件用 PascalCase，后端路由/控制器文件用 camelCase。
+- 只做核心链路，时间不够就功能降级。
+- 讨论 ER 图和接口时，任何**不在核心链路上**的新字段/新接口，一律记录但不做。先跑通，再优化。
 
+### 二、数据库 ER 图设计规则
 
+- 表名用**复数**（`users`、`posts`）；字段用**蛇形命名**（`created_at`、`user_id`），全小写。
+- 每张表必须有 `id`（主键）、`created_at`、`updated_at`。
+- 必须写清外键关系。
+- **禁用存储过程和复杂触发器**，逻辑都在 Node.js 代码里处理。
 
-五、 Git 与协作流程
+### 三、接口文档规范（Apifox）
 
-分支策略：​ main 分支受保护，禁止直接推送。每人从 develop 拉取自己的功能分支，开发完后提 Pull Request (PR)，由其他组员 Code Review​ 后才能合并。
+- 统一返回结构 `{ code, message, data }`。
+- RESTful 风格：列表 `GET /posts`，创建 `POST /posts`，删除 `DELETE /posts/:id`。
+- 错误码约定：`1001` 参数错 / `1002` 未登录 / `1003` 无权限 / `1005` 冲突重复 / `5000` 服务器错（`0` 成功）。
+- **开发必须严格对照 Apifox，不允许私自改字段名。**
 
+### 四、AI 辅助开发与代码规范（重点协调）
 
+- 全员在编辑器装 **Prettier + ESLint**，设置**保存时自动格式化**；提交前必须格式化，避免 AI 生成的缩进/引号不统一导致 Git 冲突。
+- **不要直接复制粘贴 AI 生成的整段代码**：让 AI 写代码时要加中文注释，且你自己必须能向队友解释这段代码在做什么。
+- 命名：前端 Vue 组件用 **PascalCase**，后端路由/控制器文件用 **camelCase**。
 
-UI统一规范
+### 五、Git 与协作流程
 
-1. 强制引入“UI组件库”
+- `main` 受保护，禁止直接推送。
+- 每人从 `develop` 拉自己的功能分支 → 开发完提 **Pull Request** → 其他组员 **Code Review** 通过后合并。
 
-不要自己写按钮、输入框、弹窗的样式。直接全局安装 Element Plus（Vue 3 生态最成熟，AI最熟悉，组件最全）。
+### 六、UI 统一规范
 
-规则：​ 所有人禁止使用原生 <button> 或 <input>，必须统一使用 Element Plus 的 <el-button>、<el-input> 等组件。
-
-
-2. 使用“全局样式变量”（Design Tokens）
-
-规则：​ 禁止在单个 .vue 文件里写死颜色（如 color: red），必须引用全局变量（如 color: var(--primary-color)）。
-
-AI指令：​ 告诉AI：“写样式时，只能使用项目全局CSS变量，不要自定义新颜色。”
-
-
-3. 统一“AI写前端代码”的Prompt模板
-
-使用固定的话术模板复制给AI：
-
-统一Prompt模板：
-“请使用 Vue 3 + Element Plus 帮我写这个组件。要求：
-只使用 el- 开头的组件（如 el-card, el-button）；
-样式用 scoped style，使用全局CSS变量（如 var(--primary-color)）；
-不要写任何内联样式（style="..."）；
-组件结构要简洁，注释用中文。”
-
-
-4. 锁定页面布局骨架
-
-规则：​ 组员开发时，必须直接套用当前PM写的布局组件，不允许自己重新搭框架。
+1. **强制用 Element Plus 组件**：禁止原生 `<button>`、`<input>`，一律用 `<el-button>`、`<el-input>`。
+2. **用全局设计变量**：禁止在 `.vue` 里写死颜色，只用 `src/styles/tokens.css` 里的 `var(--...)`。
+3. **统一 AI 提示词模板**（复制给 AI）：
+   > "请用 Vue 3 + Element Plus 帮我写这个组件。要求：只用 `el-` 开头组件（如 `el-card`）；样式用 scoped style，只用全局 CSS 变量（如 `var(--brand-primary)`、`var(--space-md)`）；不写内联样式；注释用中文，简单清晰。"
+4. **锁定布局骨架**：直接套用 PM 写的 `BaseLayout.vue`，不允许自己重新搭框架。

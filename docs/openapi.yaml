@@ -390,6 +390,40 @@ paths:
                     properties:
                       data: { type: object, nullable: true, example: null }
 
+  /comments/{id}/like:
+    post:
+      tags: [评论]
+      summary: 点赞评论
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/LikeResult' }
+    delete:
+      tags: [评论]
+      summary: 取消点赞评论
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/LikeResult' }
+
   # ======================= 点赞 + 收藏 =======================
   /posts/{id}/like:
     post:
@@ -674,6 +708,8 @@ components:
         user: { $ref: '#/components/schemas/User' }
         content: { type: string }
         parentId: { type: integer, nullable: true }
+        likeCount: { type: integer }
+        isLiked: { type: boolean }
         createdAt: { type: string, format: date-time }
 
     LikeResult:
