@@ -1,0 +1,689 @@
+openapi: 3.0.3
+info:
+  title: PostWEB 校园社区 接口文档
+  description: 由 docs/api-protocol.md 编译。导入 Apifox 后会自动生成全部接口。
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+    description: 本地开发环境
+tags:
+  - name: 认证
+  - name: 分类标签
+  - name: 帖子
+  - name: 评论
+  - name: 互动
+  - name: 记录中心
+  - name: 推荐
+
+# ============================================================
+# 认证方式：JWT，请求头 Authorization: Bearer <token>
+# ============================================================
+security:
+  - bearerAuth: []
+
+paths:
+  # ======================= 认证 =======================
+  /auth/register:
+    post:
+      tags: [认证]
+      summary: 注册
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string, example: scu123 }
+                password: { type: string, example: "123456" }
+                nickname: { type: string, example: 东门猛男 }
+      responses:
+        '200':
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/TokenUser' }
+
+  /auth/login:
+    post:
+      tags: [认证]
+      summary: 登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string, example: scu123 }
+                password: { type: string, example: "123456" }
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/TokenUser' }
+
+  /auth/me:
+    get:
+      tags: [认证]
+      summary: 获取当前登录用户信息
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/User' }
+
+  /auth/profile:
+    put:
+      tags: [认证]
+      summary: 更新个人信息
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nickname: { type: string, nullable: true, example: 新昵称 }
+                bio: { type: string, nullable: true, example: 新的简介 }
+                avatar_url: { type: string, nullable: true, example: "https://.../a.png" }
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/User' }
+
+  /users/{id}:
+    get:
+      tags: [认证]
+      summary: 查看某用户公开信息
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/User' }
+
+  # ======================= 分类 + 标签 =======================
+  /categories:
+    get:
+      tags: [分类标签]
+      summary: 分类列表
+      security: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Category' }
+
+  /tags:
+    get:
+      tags: [分类标签]
+      summary: 标签列表
+      security: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { type: string }
+
+  # ======================= 帖子 =======================
+  /posts:
+    get:
+      tags: [帖子]
+      summary: 帖子列表（筛选/搜索/排序）
+      security: []
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+        - { name: categoryId, in: query, schema: { type: integer } }
+        - { name: tag, in: query, schema: { type: string, example: 考研 } }
+        - { name: keyword, in: query, schema: { type: string, example: 自习室 } }
+        - { name: sort, in: query, schema: { type: string, enum: [new, hot], default: new } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+    post:
+      tags: [帖子]
+      summary: 发布帖子
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, content]
+              properties:
+                title: { type: string, example: 求考研自习室推荐 }
+                content: { type: string, example: 有没有安静又便宜的自习室推荐？ }
+                categoryId: { type: integer, nullable: true, example: 2 }
+                tags:
+                  type: array
+                  items: { type: string }
+                  example: [考研, 自习室]
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Post' }
+
+  /posts/{id}:
+    get:
+      tags: [帖子]
+      summary: 帖子详情
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Post' }
+    put:
+      tags: [帖子]
+      summary: 编辑帖子（仅作者）
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                content: { type: string }
+                categoryId: { type: integer, nullable: true }
+                tags:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Post' }
+    delete:
+      tags: [帖子]
+      summary: 删除帖子（软删除，仅作者或管理员）
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { type: object, nullable: true, example: null }
+
+  # ======================= 评论 =======================
+  /posts/{id}/comments:
+    get:
+      tags: [评论]
+      summary: 帖子的评论列表
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Comment' }
+    post:
+      tags: [评论]
+      summary: 发表评论
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, example: 我也蹲一个 }
+                parentId: { type: integer, nullable: true }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Comment' }
+
+  /comments/{id}:
+    put:
+      tags: [评论]
+      summary: 编辑评论（仅作者）
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Comment' }
+    delete:
+      tags: [评论]
+      summary: 删除评论（仅作者或管理员）
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { type: object, nullable: true, example: null }
+
+  # ======================= 点赞 + 收藏 =======================
+  /posts/{id}/like:
+    post:
+      tags: [互动]
+      summary: 点赞帖子
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/LikeResult' }
+    delete:
+      tags: [互动]
+      summary: 取消点赞
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/LikeResult' }
+
+  /posts/{id}/favorite:
+    post:
+      tags: [互动]
+      summary: 收藏帖子
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/FavoriteResult' }
+    delete:
+      tags: [互动]
+      summary: 取消收藏
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/FavoriteResult' }
+
+  # ======================= 记录中心 =======================
+  /posts/{id}/view:
+    post:
+      tags: [记录中心]
+      summary: 上报一次浏览
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { type: object, nullable: true, example: null }
+
+  /me/history:
+    get:
+      tags: [记录中心]
+      summary: 我的浏览记录
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+    delete:
+      tags: [记录中心]
+      summary: 清空浏览记录
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { type: object, nullable: true, example: null }
+
+  /me/posts:
+    get:
+      tags: [记录中心]
+      summary: 我发布的帖子
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+
+  /me/favorites:
+    get:
+      tags: [记录中心]
+      summary: 我收藏的帖子
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+
+  /me/likes:
+    get:
+      tags: [记录中心]
+      summary: 我点赞的帖子
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+
+  # ======================= 推荐（二期可选） =======================
+  /recommend/posts:
+    get:
+      tags: [推荐]
+      summary: 个性化推荐帖子
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+
+# ============================================================
+# 可复用的数据类型
+# ============================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: '登录后拿到的 token，放到请求头 "Authorization: Bearer <token>"'
+
+  schemas:
+    ApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: { type: integer, description: 0=成功, example: 0 }
+        message: { type: string, example: success }
+        data: {}
+
+    ErrorResponse:
+      type: object
+      properties:
+        code: { type: integer, example: 1001 }
+        message: { type: string, example: 参数错误 }
+        data: { type: object, nullable: true, example: null }
+
+    PageResult:
+      type: object
+      properties:
+        list: { type: array, items: {} }
+        total: { type: integer, example: 100 }
+        page: { type: integer, example: 1 }
+        pageSize: { type: integer, example: 10 }
+
+    TokenUser:
+      type: object
+      properties:
+        token: { type: string, example: eyJhbGciOiJIUzI1NiIs... }
+        user: { $ref: '#/components/schemas/User' }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        nickname: { type: string, nullable: true }
+        avatar_url: { type: string, nullable: true }
+        bio: { type: string, nullable: true }
+        role: { type: string, example: user }
+
+    Category:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        sort_order: { type: integer }
+
+    Post:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        content: { type: string }
+        categoryId: { type: integer, nullable: true }
+        tags:
+          type: array
+          items: { type: string }
+        user: { $ref: '#/components/schemas/User' }
+        viewCount: { type: integer }
+        likeCount: { type: integer }
+        favoriteCount: { type: integer }
+        commentCount: { type: integer }
+        isLiked: { type: boolean }
+        isFavorite: { type: boolean }
+        isPinned: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    Comment:
+      type: object
+      properties:
+        id: { type: integer }
+        user: { $ref: '#/components/schemas/User' }
+        content: { type: string }
+        parentId: { type: integer, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    LikeResult:
+      type: object
+      properties:
+        liked: { type: boolean }
+        likeCount: { type: integer }
+
+    FavoriteResult:
+      type: object
+      properties:
+        isFavorite: { type: boolean }
+        favoriteCount: { type: integer }
