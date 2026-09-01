@@ -48,7 +48,27 @@ npm install
 npm run dev      # http://localhost:3000
 ```
 
-前后端是两个独立 npm 包，各自启动。前端通过 `/api/...` 访问后端，跨域由后端 `cors` 放开；数据库通过 `pg` 连接（当前**还未建表、无 `.env`**）。
+前后端是两个独立 npm 包，各自启动。前端通过 `/api/...` 访问后端，跨域由后端 `cors` 放开。
+
+### 数据库初始化（第一次跑之前必须做）
+
+后端通过 `pg` 连 PostgreSQL，表结构脚本在 `docs/campushub_schema.sql`。步骤如下：
+
+```bash
+# 1. 先安装并启动 PostgreSQL，然后在终端建库
+psql -U postgres -c "CREATE DATABASE campushub;"
+
+# 2. 给刚建的库执行建表脚本（含表、索引、种子数据）
+psql -U postgres -d campushub -f docs/campushub_schema.sql
+
+# 3. 在 server/ 下把 .env.example 复制成 .env，填你的数据库账号密码
+#    Windows: copy .env.example .env    Linux/macOS: cp .env.example .env
+
+# 4. 重启后端即可
+cd server && npm run dev
+```
+
+> 数据库配置、JWT 密钥都放在 `server/.env`（已被 git 忽略，不会上传），模板见 `server/.env.example`。
 
 ## 文档与契约（权威来源）
 
@@ -57,6 +77,7 @@ npm run dev      # http://localhost:3000
 | [`docs/database-schema.md`](./docs/database-schema.md) | ER 图 + 表结构，**唯一表结构权威** |
 | [`docs/api-protocol.md`](./docs/api-protocol.md) | 接口协议，**唯一接口权威** |
 | [`docs/openapi.yaml`](./docs/openapi.yaml) | 可直接导入 Apifox 的 OpenAPI 规范 |
+| [`docs/development-plan.md`](./docs/development-plan.md) | 分工 + 排期 + 边界规则（开工必看） |
 | [`AGENTS.md`](./AGENTS.md) | 给 AI 助手的项目说明 |
 
 ---

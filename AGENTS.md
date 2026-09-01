@@ -32,7 +32,7 @@
 | 后端 | Node.js + Express | express@5、cors、dotenv、pg | `server/server.js` | 3000（`process.env.PORT` 或默认） |
 | 数据库 | PostgreSQL | pg（node-postgres） | 尚未建 schema | 默认 5432 |
 
-**说明**：目前数据库**还没建表**（无 `schema.sql`、无 `.env`），后端也只有一个 `/api/hello` 测试接口。
+**说明**：后端骨架已就绪（`server/utils/response.js` 统一返回、`server/middleware/auth.js` JWT 认证、`server/routes/auth.js` 是**全队参考实现**）；数据库建表脚本 `docs/campushub_schema.sql` 已提供，但**还没实际建库**（需各人本地跑一次，见 README"数据库初始化"）。
 
 ## 4. 仓库结构
 
@@ -52,11 +52,19 @@ postingweb/
 │   ├── .prettierrc.json    # Prettier 配置
 │   └── package.json
 ├── server/                 # 后端（Express）
-│   └── server.js
+│   ├── server.js           # 入口：中间件 + 挂载路由 + 404/错误处理
+│   ├── db.js               # pg 连接池
+│   ├── .env.example        # 环境变量模板（复制成 .env）
+│   ├── utils/response.js   # ★ 统一返回 ok/fail + 错误码（全队都用它）
+│   ├── middleware/auth.js  # ★ JWT 认证中间件
+│   ├── routes/             # 每个模块一个文件（auth.js 是参考实现）
+│   └── package.json
 ├── docs/                   # 契约与文档
 │   ├── database-schema.md  # ER 图 + 建表说明（唯一表结构权威）
 │   ├── api-protocol.md     # 接口协议（唯一接口权威）
-│   └── openapi.yaml        # 可直接导入 Apifox 的 OpenAPI 规范
+│   ├── openapi.yaml        # 可直接导入 Apifox 的 OpenAPI 规范
+│   ├── campushub_schema.sql# 可执行建表脚本（含索引/种子数据）
+│   └── development-plan.md # 分工 + 排期 + 边界规则
 └── README.md
 ```
 
