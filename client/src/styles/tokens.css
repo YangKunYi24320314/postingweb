@@ -1,0 +1,74 @@
+/* ============================================================
+ * 统一设计变量（Design Tokens）
+ * 这是整个前端 UI 的"颜色字典"。
+ * 全队约定：写样式时，颜色/间距/圆角/阴影一律用这里的变量，
+ * 不要自己写死比如 #ff0000、8px 这种魔法数字。
+ * 这样即使 5 个人审美不同，界面也会是同一套风格。
+ * ============================================================ */
+
+:root {
+  /* ---------- 品牌主色 ---------- */
+  --brand-primary: #3a6df0;
+  --brand-primary-hover: #2e57c0;
+  --brand-primary-light: #ecf1fe;
+  --brand-gradient: linear-gradient(135deg, #3a6df0 0%, #5b8cff 100%);
+
+  /* ---------- 语义色（成功/警告/危险/信息） ---------- */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #64748b;
+
+  /* ---------- 文字色 ---------- */
+  --text-primary: #1f2937;
+  --text-regular: #374151;
+  --text-secondary: #6b7280;
+  --text-placeholder: #9ca3af;
+
+  /* ---------- 边框 ---------- */
+  --border-color: #e5e7eb;
+  --border-color-light: #f3f4f6;
+
+  /* ---------- 背景色 ---------- */
+  --bg-page: #f5f7fa;
+  --bg-white: #ffffff;
+  --bg-hover: #f9fafb;
+
+  /* ---------- 间距节奏（倍数递增，别用 7px/13px 这种颗料） ---------- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* ---------- 圆角 ---------- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 999px;
+
+  /* ---------- 阴影 ---------- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  /* ---------- 字体 ---------- */
+  --font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+
+  /* ---------- 覆盖 Element Plus 的主色，让它跟我们的品牌主色一致 ---------- */
+  --el-color-primary: var(--brand-primary);
+  --el-color-primary-light-3: #7599f4;
+  --el-color-primary-light-5: #9cb6f7;
+  --el-color-primary-light-7: #c4d3fa;
+  --el-color-primary-light-8: #d7e1fc;
+  --el-color-primary-light-9: #ecf1fe;
+  --el-color-primary-dark-2: var(--brand-primary-hover);
+  --el-color-success: var(--color-success);
+  --el-color-warning: var(--color-warning);
+  --el-color-danger: var(--color-danger);
+  --el-color-info: var(--color-info);
+
+  --el-border-radius-base: var(--radius-md);
+  --el-font-family: var(--font-family);
+}
