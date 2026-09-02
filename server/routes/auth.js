@@ -1,7 +1,7 @@
 // 认证模块：注册 / 登录 / 个人信息的参考实现。
 // 全队写其它模块（posts/comments/...）时，照这里的三点来：
 //   1. 用 ok / fail 统一返回  →  require('../utils/response')
-//   2. 数据库用参数化查询 $1 $2，绝不拼字符串，防 SQL 注入
+//   2. 数据库用参数化查询，不拼字符串，防 SQL 注入
 //   3. 需要登录的接口在前面挂 auth 中间件  →  require('../middleware/auth')
 const express = require('express')
 const bcrypt = require('bcryptjs')
