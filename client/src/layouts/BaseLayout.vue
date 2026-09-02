@@ -108,7 +108,7 @@ function handleLogout() {
   place-items: center;
   border-radius: var(--radius-md);
   background: var(--brand-gradient);
-  color: #fff;
+  color: var(--bg-white);
   font-weight: 700;
 }
 

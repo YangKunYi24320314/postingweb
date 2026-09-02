@@ -30,9 +30,9 @@
 |----|------|----------|------|------|
 | 前端 | Vue 3 + Vite | element-plus、@element-plus/icons-vue、vue-router@4 | `client/src/main.js` | 5173（vite 默认） |
 | 后端 | Node.js + Express | express@5、cors、dotenv、pg | `server/server.js` | 3000（`process.env.PORT` 或默认） |
-| 数据库 | PostgreSQL | pg（node-postgres） | 尚未建 schema | 默认 5432 |
+| 数据库 | PostgreSQL | pg（node-postgres） | 已建库 `campushub` | 默认 5432 |
 
-**说明**：后端骨架已就绪（`server/utils/response.js` 统一返回、`server/middleware/auth.js` JWT 认证、`server/routes/auth.js` 是**全队参考实现**）；数据库建表脚本 `devdocs/campushub_schema.sql` 已提供，但**还没实际建库**（需各人本地跑一次，见 README"数据库初始化"）。
+**说明**：后端骨架已就绪（`server/utils/response.js` 统一返回、`server/middleware/auth.js` JWT 认证、`server/routes/auth.js` 是**全队参考实现**）；数据库建表脚本 `devdocs/campushub_schema.sql` 已提供并**已建库建表**（含种子数据，见 README"数据库初始化"）。
 
 ## 4. 仓库结构
 
@@ -123,7 +123,7 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 
 ## 8. 团队/进度背景
 
-- 4 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `docs/` 契约 + 统一的代码规范必须遵守。
+- 4 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `devdocs/` 契约 + 统一的代码规范必须遵守。
 - 建议后端实现顺序：auth → posts → comments → like/favorite → history → recommend。
 
 ## 9. 当你被要求改代码时

@@ -18,7 +18,7 @@ async function ensurePostExists(client, postId) {
         AND is_deleted = false
         AND status = 1
     `,
-    [postId],
+    [postId]
   )
 
   return result.rowCount > 0
@@ -32,7 +32,7 @@ async function ensureCommentExists(client, commentId) {
       WHERE id = $1
         AND status = 1
     `,
-    [commentId],
+    [commentId]
   )
 
   return result.rowCount > 0
@@ -84,7 +84,7 @@ router.post('/posts/:id/like', auth, async (req, res, next) => {
           VALUES ($1, $2)
           ON CONFLICT (user_id, post_id) DO NOTHING
         `,
-        [userId, postId],
+        [userId, postId]
       )
 
       if (insertResult.rowCount === 0) {
@@ -102,7 +102,7 @@ router.post('/posts/:id/like', auth, async (req, res, next) => {
           WHERE id = $1
           RETURNING like_count
         `,
-        [postId],
+        [postId]
       )
 
       return {
@@ -141,7 +141,7 @@ router.delete('/posts/:id/like', auth, async (req, res, next) => {
 
       const deleteResult = await client.query(
         'DELETE FROM post_likes WHERE user_id = $1 AND post_id = $2',
-        [userId, postId],
+        [userId, postId]
       )
 
       if (deleteResult.rowCount > 0) {
@@ -153,8 +153,8 @@ router.delete('/posts/:id/like', auth, async (req, res, next) => {
             WHERE id = $1
             RETURNING like_count
           `,
-          [postId],
-          )
+          [postId]
+        )
 
         return {
           liked: false,
@@ -198,7 +198,7 @@ router.post('/posts/:id/favorite', auth, async (req, res, next) => {
           VALUES ($1, $2)
           ON CONFLICT (user_id, post_id) DO NOTHING
         `,
-        [userId, postId],
+        [userId, postId]
       )
 
       if (insertResult.rowCount === 0) {
@@ -216,7 +216,7 @@ router.post('/posts/:id/favorite', auth, async (req, res, next) => {
           WHERE id = $1
           RETURNING favorite_count
         `,
-        [postId],
+        [postId]
       )
 
       return {
@@ -255,7 +255,7 @@ router.delete('/posts/:id/favorite', auth, async (req, res, next) => {
 
       const deleteResult = await client.query(
         'DELETE FROM favorites WHERE user_id = $1 AND post_id = $2',
-        [userId, postId],
+        [userId, postId]
       )
 
       if (deleteResult.rowCount > 0) {
@@ -267,8 +267,8 @@ router.delete('/posts/:id/favorite', auth, async (req, res, next) => {
             WHERE id = $1
             RETURNING favorite_count
           `,
-          [postId],
-          )
+          [postId]
+        )
 
         return {
           isFavorite: false,
@@ -312,7 +312,7 @@ router.post('/comments/:id/like', auth, async (req, res, next) => {
           VALUES ($1, $2)
           ON CONFLICT (user_id, comment_id) DO NOTHING
         `,
-        [userId, commentId],
+        [userId, commentId]
       )
 
       if (insertResult.rowCount === 0) {
@@ -330,7 +330,7 @@ router.post('/comments/:id/like', auth, async (req, res, next) => {
           WHERE id = $1
           RETURNING like_count
         `,
-        [commentId],
+        [commentId]
       )
 
       return {
@@ -369,7 +369,7 @@ router.delete('/comments/:id/like', auth, async (req, res, next) => {
 
       const deleteResult = await client.query(
         'DELETE FROM comment_likes WHERE user_id = $1 AND comment_id = $2',
-        [userId, commentId],
+        [userId, commentId]
       )
 
       if (deleteResult.rowCount > 0) {
@@ -381,8 +381,8 @@ router.delete('/comments/:id/like', auth, async (req, res, next) => {
             WHERE id = $1
             RETURNING like_count
           `,
-          [commentId],
-          )
+          [commentId]
+        )
 
         return {
           liked: false,

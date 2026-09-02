@@ -21,9 +21,10 @@ function signToken(userId) {
 }
 
 // 把数据库行的蛇形字段转成前端要的驼峰字段（跟 api-protocol 对齐）
+// 注意：BIGINT 主键从 pg 取出来是字符串，这里统一转成 Number，方便前端比较。
 function toUser(row) {
   return {
-    id: row.id,
+    id: Number(row.id),
     username: row.username,
     nickname: row.nickname,
     avatarUrl: row.avatar_url,
@@ -92,6 +93,34 @@ router.post('/auth/login', async (req, res) => {
   }
 
   return ok(res, { token: signToken(user.id), user: toUser(user) })
+})
+
+// GET /api/users/:id —— 查看某用户公开信息（无需登录）
+router.get('/users/:id', async (req, res) => {
+  const userId = Number(req.params.id)
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return fail(res, CODE.PARAM_ERROR, '用户 id 不合法')
+  }
+
+  const result = await pool.query(
+    `SELECT u.id::int, u.nickname, u.avatar_url, u.bio,
+            (SELECT COUNT(*)::int FROM posts p WHERE p.user_id = u.id AND p.is_deleted = false) AS post_count
+     FROM users u
+     WHERE u.id = $1 AND u.status = 1`,
+    [userId]
+  )
+  if (result.rowCount === 0) {
+    return fail(res, CODE.NOT_FOUND, '用户不存在', 404)
+  }
+
+  const row = result.rows[0]
+  return ok(res, {
+    id: row.id,
+    nickname: row.nickname,
+    avatarUrl: row.avatar_url,
+    bio: row.bio,
+    postCount: row.post_count,
+  })
 })
 
 // GET /api/auth/me —— 获取当前登录用户（需登录）

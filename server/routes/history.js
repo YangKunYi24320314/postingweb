@@ -43,10 +43,9 @@ router.post('/posts/:id/view', auth, async (req, res) => {
   }
 
   // 先确认帖子存在且未被删除（软删除的帖子不算）
-  const post = await pool.query(
-    'SELECT id FROM posts WHERE id = $1 AND is_deleted = false',
-    [postId]
-  )
+  const post = await pool.query('SELECT id FROM posts WHERE id = $1 AND is_deleted = false', [
+    postId,
+  ])
   if (post.rowCount === 0) {
     return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
   }
