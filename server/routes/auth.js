@@ -10,6 +10,7 @@ const jwt = require('jsonwebtoken')
 const pool = require('../db')
 const { ok, fail, CODE } = require('../utils/response')
 const { auth } = require('../middleware/auth')
+const { validateCredentials, normalizeNickname } = require('../utils/auth-validation')
 
 const router = express.Router()
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
@@ -34,13 +35,20 @@ function toUser(row) {
 // POST /api/auth/register —— 注册
 router.post('/auth/register', async (req, res) => {
   const { username, password, nickname } = req.body || {}
-
-  if (!username || !password) {
-    return fail(res, CODE.PARAM_ERROR, '用户名和密码不能为空')
+  let credentials
+  try {
+    credentials = validateCredentials(username, password)
+  } catch (error) {
+    if (error.code === 'AUTH_VALIDATION') {
+      return fail(res, CODE.PARAM_ERROR, error.message)
+    }
+    throw error
   }
 
   // 先查重：用户名已被占用则直接返回冲突错误
-  const exists = await pool.query('SELECT id FROM users WHERE username = $1', [username])
+  const exists = await pool.query('SELECT id FROM users WHERE username = $1', [
+    credentials.username,
+  ])
   if (exists.rowCount > 0) {
     return fail(res, CODE.CONFLICT, '用户名已被占用')
   }
@@ -52,7 +60,7 @@ router.post('/auth/register', async (req, res) => {
     `INSERT INTO users (username, password_hash, nickname)
      VALUES ($1, $2, $3)
      RETURNING id, username, nickname, avatar_url, bio, role`,
-    [username, passwordHash, nickname || username]
+    [credentials.username, passwordHash, normalizeNickname(credentials.username, nickname)]
   )
 
   const user = result.rows[0]
@@ -62,18 +70,23 @@ router.post('/auth/register', async (req, res) => {
 // POST /api/auth/login —— 登录
 router.post('/auth/login', async (req, res) => {
   const { username, password } = req.body || {}
-
-  if (!username || !password) {
-    return fail(res, CODE.PARAM_ERROR, '用户名和密码不能为空')
+  let credentials
+  try {
+    credentials = validateCredentials(username, password)
+  } catch (error) {
+    if (error.code === 'AUTH_VALIDATION') {
+      return fail(res, CODE.PARAM_ERROR, error.message)
+    }
+    throw error
   }
 
-  const result = await pool.query('SELECT * FROM users WHERE username = $1', [username])
+  const result = await pool.query('SELECT * FROM users WHERE username = $1', [credentials.username])
   if (result.rowCount === 0) {
     return fail(res, CODE.UNAUTHORIZED, '用户名或密码错误', 401)
   }
 
   const user = result.rows[0]
-  const match = await bcrypt.compare(password, user.password_hash)
+  const match = await bcrypt.compare(credentials.password, user.password_hash)
   if (!match) {
     return fail(res, CODE.UNAUTHORIZED, '用户名或密码错误', 401)
   }
