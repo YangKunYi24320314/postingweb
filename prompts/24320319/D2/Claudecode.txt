@@ -1,0 +1,17 @@
+D2 辅助开发提示词记录
+
+1. 请根据项目现有的 PostgreSQL 表结构和 API 规则，帮我设计互动模块的后端实现步骤。要求只包含帖子点赞、取消点赞、帖子收藏、取消收藏、评论点赞、取消评论点赞，不包含发表评论和评论列表。
+
+2. 项目后端目前只有 server.js 和 /api/hello 测试接口。请帮我按照 Express 项目的方式拆分互动模块代码，包括数据库连接、JWT 鉴权中间件、互动路由文件，并保持统一返回格式 { code, message, data }。
+
+3. 点赞和收藏功能如何避免重复操作？请说明数据库唯一约束、后端 ON CONFLICT DO NOTHING、以及返回 1005 冲突错误之间的关系。
+
+4. 点赞、收藏、取消点赞、取消收藏时，为什么既要操作关系表，又要更新 posts.like_count、posts.favorite_count 或 comments.like_count？如何避免计数字段和关系表不一致？
+
+5. 我在本地测试接口时，curl 请求返回 code=1002，请帮我分析 Authorization 请求头应该怎么写，以及 JWT token 应该如何生成和传递。
+
+6. 请帮我设计一个 Vue 3 + Element Plus 的 InteractionButtons 组件，要求支持帖子点赞、帖子收藏、评论点赞，使用项目已有的 interactions.js API 封装，不直接在页面里写 fetch。
+
+7. 临时测试页面验证通过后，如何撤回测试页面，只保留可复用组件和后端接口，避免影响其他同学负责的页面开发？
+
+8. 我已经完成互动模块开发，准备提交到 Gitee。请帮我检查 git status 中哪些文件应该提交。
