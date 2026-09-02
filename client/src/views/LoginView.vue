@@ -1,28 +1,49 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { login } from '../api/auth'
+import { login, register } from '../api/auth'
 import { saveToken } from '../api/request'
 
 const router = useRouter()
 const form = reactive({
   username: '',
   password: '',
+  nickname: '',
+  confirmPassword: '',
 })
 const loading = ref(false)
+const isRegister = ref(false)
+const pageTitle = computed(() => (isRegister.value ? '注册' : '登录'))
 
 async function handleSubmit() {
-  if (!form.username || !form.password) {
+  const username = form.username.trim()
+  if (!username || !form.password) {
     ElMessage.warning('请输入账号和密码')
+    return
+  }
+  if (username.length < 3 || username.length > 50) {
+    ElMessage.warning('用户名长度应为 3-50 位')
+    return
+  }
+  if (form.password.length < 6) {
+    ElMessage.warning('密码长度不能少于 6 位')
+    return
+  }
+  if (isRegister.value && form.password !== form.confirmPassword) {
+    ElMessage.warning('两次输入的密码不一致')
     return
   }
   loading.value = true
   try {
     // login() 走统一封装：返回的 data 里就是 { token, user }
-    const data = await login({ username: form.username, password: form.password })
+    const action = isRegister.value ? register : login
+    const payload = isRegister.value
+      ? { username, password: form.password, nickname: form.nickname.trim() }
+      : { username, password: form.password }
+    const data = await action(payload)
     saveToken(data.token)
-    ElMessage.success('登录成功')
+    ElMessage.success(isRegister.value ? '注册成功' : '登录成功')
     router.push('/')
   } catch (e) {
     // 统一封装已抛错，message 就是后端返回的提示（如"用户名或密码错误"）
@@ -36,10 +57,23 @@ async function handleSubmit() {
 <template>
   <div class="login">
     <el-card class="login__card" shadow="always">
-      <h2 class="login__title">登录</h2>
+      <h2 class="login__title">{{ pageTitle }}</h2>
       <el-form :model="form" @submit.prevent>
         <el-form-item>
           <el-input v-model="form.username" placeholder="用户名 / 学号" size="large" />
+        </el-form-item>
+        <el-form-item v-if="isRegister">
+          <el-input
+            v-model="form.confirmPassword"
+            type="password"
+            placeholder="确认密码"
+            show-password
+            size="large"
+            @keyup.enter="handleSubmit"
+          />
+        </el-form-item>
+        <el-form-item v-if="isRegister">
+          <el-input v-model="form.nickname" placeholder="昵称（可选）" size="large" />
         </el-form-item>
         <el-form-item>
           <el-input
@@ -48,6 +82,7 @@ async function handleSubmit() {
             placeholder="密码"
             show-password
             size="large"
+            @keyup.enter="handleSubmit"
           />
         </el-form-item>
         <el-button
@@ -57,11 +92,14 @@ async function handleSubmit() {
           :loading="loading"
           @click="handleSubmit"
         >
-          登录
+          {{ pageTitle }}
         </el-button>
         <div class="login__register">
-          还没有账号？
-          <el-link type="primary">去注册</el-link>
+          <span v-if="!isRegister">还没有账号？</span>
+          <span v-else>已经有账号？</span>
+          <el-link type="primary" @click="isRegister = !isRegister">
+            {{ isRegister ? '去登录' : '去注册' }}
+          </el-link>
         </div>
       </el-form>
     </el-card>

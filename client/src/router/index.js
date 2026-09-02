@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import BaseLayout from '../layouts/BaseLayout.vue'
+import { getToken } from '../api/request'
 
 // TODO：每个页面在后面功能开发时替换成真实页面
 const routes = [
@@ -49,6 +50,12 @@ const router = createRouter({
 // 浏览器标签页标题跟随页面
 router.afterEach((to) => {
   document.title = to.meta.title ? `${to.meta.title} · 校园社区` : '校园社区'
+})
+
+router.beforeEach((to) => {
+  if (to.name === 'Login' && getToken()) {
+    return { path: '/' }
+  }
 })
 
 export default router
