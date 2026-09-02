@@ -21,7 +21,7 @@ function toPostItem(row) {
     commentCount: row.comment_count,
     createdAt: row.created_at,
     favoritedAt: row.favorited_at, // 只有"收藏列表"的查询里有这个字段
-    likedAt: row.liked_at,         // 只有"点赞列表"的查询里有这个字段
+    likedAt: row.liked_at, // 只有"点赞列表"的查询里有这个字段
   }
   // 注：其余查询没有 favorited_at/liked_at 列，值是 undefined，JSON.stringify 会自动省略它。
 }

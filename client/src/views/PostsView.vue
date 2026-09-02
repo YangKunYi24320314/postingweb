@@ -1,95 +1,257 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
-// 初始化空数组，避免 undefined.length 报错
-const postList = ref([])
+import { onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Search, View, ChatDotRound, Pointer } from '@element-plus/icons-vue'
+import { getPostList } from '../api/post'
+import { getCategories } from '../api/catalog'
+import InteractionButtons from '../components/InteractionButtons.vue'
 
-const fetchPosts = async () => {
-  console.log("开始请求帖子接口")
+// 列表数据
+const list = ref([])
+const total = ref(0)
+const page = ref(1)
+const pageSize = ref(10)
+const loading = ref(false)
+
+// 筛选条件
+const categories = ref([]) // 分类下拉数据
+const filters = ref({
+  categoryId: '',
+  keyword: '',
+  sort: 'new', // new(最新) / hot(最热)
+})
+
+// 格式化时间：ISO → "2026-09-01 08:54"
+function formatTime(iso) {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// 根据 id 找到分类名
+function categoryName(id) {
+  if (!id) return '未分类'
+  const found = categories.value.find((c) => c.id === id)
+  return found ? found.name : '未分类'
+}
+
+// 拉取帖子列表
+async function loadList() {
+  loading.value = true
   try {
-    // ✅ 修改请求地址，直接访问后端完整地址 127.0.0.1:3000/posts
-    const res = await axios.get('http://127.0.0.1:3000/posts')
-    console.log("后端完整返回：", res.data)
-    // 取出真正的帖子数组赋值
-    postList.value = res.data.data
+    const data = await getPostList({
+      page: page.value,
+      pageSize: pageSize.value,
+      categoryId: filters.value.categoryId || undefined,
+      keyword: filters.value.keyword || undefined,
+      sort: filters.value.sort,
+    })
+    list.value = data.list
+    total.value = data.total
   } catch (err) {
-    console.error("请求失败：", err)
-    // 请求出错依然保持为空数组，防止页面崩溃
-    postList.value = []
+    ElMessage.error(err.message || '加载失败')
+  } finally {
+    loading.value = false
   }
 }
 
-onMounted(() => {
-  fetchPosts()
+// 切换分类/搜索/排序都回到第一页并重新加载
+function handleFilterChange() {
+  page.value = 1
+  loadList()
+}
+
+// 翻页
+function handlePageChange(p) {
+  page.value = p
+  loadList()
+}
+
+onMounted(async () => {
+  loadList()
+  try {
+    categories.value = await getCategories()
+  } catch (e) {
+    ElMessage.error(e.message || '分类加载失败')
+  }
 })
 </script>
 
 <template>
-  <div class="posts-page">
-    <div class="container">
-      <h2 class="page-title">📝 帖子广场</h2>
-      <div v-if="postList.length === 0" class="empty-tip">
-        暂无帖子数据
-      </div>
-      <div class="post-list">
-        <div class="post-card" v-for="item in postList" :key="item.id">
-          <div class="post-header">
-            <span class="post-title">{{ item.title }}</span>
-            <el-tag size="small" type="info">{{ item.tag }}</el-tag>
+  <div class="page-container">
+    <!-- 顶部工具条：分类筛选 + 关键词搜索 + 排序切换 -->
+    <div class="filter-bar">
+      <el-select
+        v-model="filters.categoryId"
+        placeholder="全部分类"
+        clearable
+        class="filter-bar__category"
+        @change="handleFilterChange"
+      >
+        <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+      </el-select>
+
+      <el-input
+        v-model="filters.keyword"
+        placeholder="搜索标题或正文"
+        clearable
+        class="filter-bar__search"
+        :prefix-icon="Search"
+        @keyup.enter="handleFilterChange"
+        @clear="handleFilterChange"
+      />
+
+      <el-radio-group v-model="filters.sort" class="filter-bar__sort" @change="handleFilterChange">
+        <el-radio-button value="new">最新</el-radio-button>
+        <el-radio-button value="hot">最热</el-radio-button>
+      </el-radio-group>
+    </div>
+
+    <!-- 帖子列表 -->
+    <el-card v-loading="loading" shadow="never" class="post-list">
+      <el-empty v-if="!loading && list.length === 0" description="暂无帖子" />
+
+      <div v-for="item in list" :key="item.id" class="post-card">
+        <div class="post-card__head">
+          <h3 class="post-card__title">{{ item.title }}</h3>
+          <span class="post-card__category">{{ categoryName(item.categoryId) }}</span>
+        </div>
+
+        <div class="post-card__meta">
+          <span class="post-card__author">{{ item.user?.nickname || '匿名用户' }}</span>
+          <span class="post-card__time">{{ formatTime(item.createdAt) }}</span>
+        </div>
+
+        <!-- 标签 -->
+        <div v-if="item.tags && item.tags.length" class="post-card__tags">
+          <el-tag v-for="tag in item.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
+        </div>
+
+        <!-- 数据 + 互动按钮 -->
+        <div class="post-card__stats">
+          <div class="post-card__counts">
+            <span
+              ><el-icon><View /></el-icon> {{ item.viewCount }}</span
+            >
+            <span
+              ><el-icon><ChatDotRound /></el-icon> {{ item.commentCount }}</span
+            >
+            <span
+              ><el-icon><Pointer /></el-icon> {{ item.likeCount }}</span
+            >
           </div>
-          <div class="post-content">
-            {{ item.content }}
-          </div>
+          <InteractionButtons
+            :post-id="item.id"
+            :liked="item.isLiked"
+            :like-count="item.likeCount"
+            :favorited="item.isFavorite"
+            :favorite-count="item.favoriteCount"
+            size="small"
+          />
         </div>
       </div>
-    </div>
+
+      <el-pagination
+        v-model:current-page="page"
+        class="post-list__pagination"
+        background
+        layout="total, prev, pager, next"
+        :total="total"
+        :page-size="pageSize"
+        @current-change="handlePageChange"
+      />
+    </el-card>
   </div>
 </template>
 
 <style scoped>
-.posts-page {
-  background-color: #f5f7fa;
-  min-height: calc(100vh - 120px);
-  padding: 32px 16px;
-}
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-}
-.page-title {
-  text-align: center;
-  color: #303133;
-  margin-bottom: 24px;
-}
-.empty-tip {
-  text-align: center;
-  color: #909399;
-  padding: 40px 0;
-}
-.post-list {
+.filter-bar {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.post-card {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
-}
-.post-header {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
 }
-.post-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+
+.filter-bar__category {
+  width: 140px;
 }
-.post-content {
-  color: #606266;
-  line-height: 1.6;
+
+.filter-bar__search {
+  max-width: 260px;
+}
+
+.post-list {
+  padding: var(--space-md);
+}
+
+.post-card {
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--border-color-light);
+}
+
+.post-card:last-child {
+  border-bottom: none;
+}
+
+.post-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.post-card__title {
+  font-size: 17px;
+  color: var(--text-primary);
+}
+
+.post-card__category {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.post-card__meta {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-xs);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.post-card__tags {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.post-card__stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.post-card__counts {
+  display: flex;
+  gap: var(--space-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.post-card__counts span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.post-list__pagination {
+  margin-top: var(--space-md);
+  justify-content: flex-end;
 }
 </style>
