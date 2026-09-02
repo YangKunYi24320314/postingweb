@@ -74,10 +74,10 @@ cd server && npm run dev
 
 | 文件 | 作用 |
 |------|------|
-| [`docs/database-schema.md`](./docs/database-schema.md) | ER 图 + 表结构，**唯一表结构权威** |
-| [`docs/api-protocol.md`](./docs/api-protocol.md) | 接口协议，**唯一接口权威** |
-| [`docs/openapi.yaml`](./docs/openapi.yaml) | 可直接导入 Apifox 的 OpenAPI 规范 |
-| [`docs/development-plan.md`](./docs/development-plan.md) | 分工 + 排期 + 边界规则（开工必看） |
+| [`docs/database-schema.md`](./devdocs/database-schema.md) | ER 图 + 表结构，**唯一表结构权威** |
+| [`docs/api-protocol.md`](./devdocs/api-protocol.md) | 接口协议，**唯一接口权威** |
+| [`docs/openapi.yaml`](./devdocs/openapi.yaml) | 可直接导入 Apifox 的 OpenAPI 规范 |
+| [`docs/development-plan.md`](./devdocs/development-plan.md) | 分工 + 排期 + 边界规则（开工必看） |
 | [`AGENTS.md`](./AGENTS.md) | 给 AI 助手的项目说明 |
 
 ---
