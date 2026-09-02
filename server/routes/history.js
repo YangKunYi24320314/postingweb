@@ -3,7 +3,7 @@
 const express = require('express')
 const pool = require('../db')
 const { ok, fail, CODE } = require('../utils/response')
-const auth = require('../middleware/auth')
+const { auth } = require('../middleware/auth')
 
 const router = express.Router()
 
