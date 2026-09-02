@@ -1,4 +1,4 @@
-# 并行开发计划（分工 + 排期）
+# 并行开发计划
 
 > 前提：契约已冻结（`docs/database-schema.md`、`docs/api-protocol.md`、`docs/openapi.yaml`），
 > 后端参考模块（`server/routes/auth.js` + `utils/response.js` + `middleware/auth.js`）已就绪。
