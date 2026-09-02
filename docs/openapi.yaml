@@ -392,7 +392,7 @@ paths:
 
   /comments/{id}/like:
     post:
-      tags: [评论]
+      tags: [互动]
       summary: 点赞评论
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer } }
@@ -408,7 +408,7 @@ paths:
                     properties:
                       data: { $ref: '#/components/schemas/LikeResult' }
     delete:
-      tags: [评论]
+      tags: [互动]
       summary: 取消点赞评论
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer } }

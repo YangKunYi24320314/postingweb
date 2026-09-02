@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 // 引入 dotenv 并配置
 require('dotenv').config();
+const interactionRoutes = require('./routes/interactions');
 
 // 创建 express 应用
 const app = express();
@@ -15,7 +16,18 @@ app.use(cors());
 
 // 定义一个简单的测试接口
 app.get('/api/hello', (req, res) => {
-  res.json({ message: 'Hello from backend!' });
+  res.json({ code: 0, message: 'success', data: { message: 'Hello from backend!' } });
+});
+
+app.use('/api', interactionRoutes);
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({
+    code: 5000,
+    message: '服务器内部错误',
+    data: null,
+  });
 });
 
 // 从环境变量取端口，没有就用 3000

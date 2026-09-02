@@ -134,7 +134,7 @@
 
 ---
 
-## 五、评论 Comments（模块3：互动系统）
+## 五、评论 Comments
 
 ### 5.1 `GET /posts/:id/comments` — 帖子的评论列表
 **响应 data**：`[ { "id": 3, "user": {"id":2,"nickname":"..."}, "content":"...", "likeCount": 5, "isLiked": false, "createdAt":"..." }, ... ]`
@@ -149,11 +149,6 @@
 ### 5.3 `PUT /comments/:id` — 编辑评论（需登录，仅作者，可选）
 ### 5.4 `DELETE /comments/:id` — 删除评论（需登录，仅作者或 admin，可选）
 
-### 5.5 评论点赞
-- `POST /comments/:id/like`（需登录）— 点赞评论
-- `DELETE /comments/:id/like`（需登录）— 取消点赞评论
-**响应 data**：`{ "liked": true, "likeCount": 6 }`
-
 ---
 
 ## 六、点赞 + 收藏（模块3：互动系统）
@@ -167,6 +162,11 @@
 - `POST /posts/:id/favorite`（需登录）— 收藏
 - `DELETE /posts/:id/favorite`（需登录）— 取消收藏
 **响应 data**：`{ "isFavorite": true, "favoriteCount": 12 }`
+
+### 6.3 评论点赞
+- `POST /comments/:id/like`（需登录）— 点赞评论
+- `DELETE /comments/:id/like`（需登录）— 取消点赞评论
+**响应 data**：`{ "liked": true, "likeCount": 6 }`
 
 ---
 
