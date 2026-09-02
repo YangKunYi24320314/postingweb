@@ -65,7 +65,7 @@ onMounted(loadList)
         <el-tab-pane label="我点赞的" name="likes" />
       </el-tabs>
 
-      <el-table :data="list" v-loading="loading" empty-text="暂无内容">
+      <el-table v-loading="loading" :data="list" empty-text="暂无内容">
         <el-table-column prop="title" label="帖子标题" min-width="200" />
         <el-table-column label="作者" width="140">
           <template #default="{ row }">{{ row.author?.nickname || '匿名用户' }}</template>
@@ -79,12 +79,12 @@ onMounted(loadList)
       </el-table>
 
       <el-pagination
+        v-model:current-page="page"
         class="profile__pagination"
         background
         layout="total, prev, pager, next"
         :total="total"
         :page-size="pageSize"
-        v-model:current-page="page"
         @current-change="handlePageChange"
       />
     </el-card>

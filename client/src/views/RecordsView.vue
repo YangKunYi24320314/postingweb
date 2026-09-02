@@ -70,7 +70,7 @@ onMounted(() => {
         </el-popconfirm>
       </div>
 
-      <el-table :data="list" v-loading="loading" empty-text="暂无浏览记录">
+      <el-table v-loading="loading" :data="list" empty-text="暂无浏览记录">
         <el-table-column prop="title" label="帖子标题" min-width="200" />
         <el-table-column label="作者" width="140">
           <template #default="{ row }">
@@ -88,12 +88,12 @@ onMounted(() => {
       </el-table>
 
       <el-pagination
+        v-model:current-page="page"
         class="records__pagination"
         background
         layout="total, prev, pager, next"
         :total="total"
         :page-size="pageSize"
-        v-model:current-page="page"
         @current-change="handlePageChange"
       />
     </el-card>
