@@ -30,8 +30,9 @@
 postingweb/
 ├── client/      # 前端（Vue3 + Vite，独立 npm 包）
 ├── server/      # 后端（Express，独立 npm 包）
-├── devdocs/     # ★ 契约文档（ER图 / 接口协议 / OpenAPI）
-└── AGENTS.md    # ★ AI 协作说明书（新 AI 会话先读它）
+├── devdocs/     # ★ 契约文档（ER图 / 接口协议 / OpenAPI），唯一权威，勿放开发无关内容
+├── AGENTS.md    # ★ AI 协作说明书（新 AI 会话先读它）
+└── 2026.9.3模块总结与不足.md  # PM 复盘（非契约，了解历史模块情况用）
 ```
 
 ## 快速开始

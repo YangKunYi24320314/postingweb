@@ -29,8 +29,10 @@
 | 端 | 技术 | 关键依赖 | 入口 | 端口 |
 |----|------|----------|------|------|
 | 前端 | Vue 3 + Vite | element-plus、@element-plus/icons-vue、vue-router@4 | `client/src/main.js` | 5173（vite 默认） |
-| 后端 | Node.js + Express | express@5、cors、dotenv、pg | `server/server.js` | 3000（`process.env.PORT` 或默认） |
+| 后端 | Node.js + Express | express@5、cors、dotenv、pg、bcryptjs、jsonwebtoken、multer | `server/server.js` | 3000（`process.env.PORT` 或默认） |
 | 数据库 | PostgreSQL | pg（node-postgres） | 已建库 `campushub` | 默认 5432 |
+
+> `bcryptjs`(密码加密) / `jsonwebtoken`(签发JWT) / `multer`(文件上传)都已被 `routes/` 使用，必须在 `server/package.json` 里，缺一不可。
 
 **说明**：后端骨架已就绪（`server/utils/response.js` 统一返回、`server/middleware/auth.js` JWT 认证、`server/routes/auth.js` 是**全队参考实现**）；数据库建表脚本 `devdocs/campushub_schema.sql` 已提供并**已建库建表**（含种子数据，见 README"数据库初始化"）。
 
@@ -48,15 +50,20 @@ postingweb/
 │   │   ├── layouts/BaseLayout.vue  # ★ 统一顶部导航 + 内容区，页面放在里面
 │   │   ├── router/index.js # 路由表 + 页面标题
 │   │   ├── views/          # 每个页面一个文件（Home/Posts/Records/Profile/Login…）
-│   │   └── components/     # 可复用组件
+│   │   └── components/     # 可复用组件（如 InteractionButtons）
+│   ├── public/             # 静态资源（favicon 等，vite 直接拷贝）
+│   ├── test/               # node:test 单测（node --test 运行）
 │   ├── eslint.config.js    # ESLint 扁平配置
 │   ├── .prettierrc.json    # Prettier 配置
 │   └── package.json
 ├── server/                 # 后端（Express）
-│   ├── server.js           # 入口：中间件 + 挂载路由 + 404/错误处理
+│   ├── server.js           # 入口：中间件 + 自动加载 routes + 404/错误处理
 │   ├── db.js               # pg 连接池
 │   ├── .env.example        # 环境变量模板
+│   ├── static/             # 上传文件托管目录（multer 写入）
+│   ├── test/               # node:test 单测（node --test 运行）
 │   ├── utils/response.js   # 统一返回 ok/fail + 错误码
+│   ├── utils/auth-validation.js # 注册/登录入参校验
 │   ├── middleware/auth.js  # JWT 认证中间件
 │   ├── routes/             # 每模块一个文件，server.js 自动加载（auth.js 是参考实现）
 │   └── package.json
@@ -72,12 +79,13 @@ postingweb/
 ├── node_modules/           # 根目录遗留文件（gitignored，无实际作用）
 ├── AGENTS.md               # 给 AI 助手的项目说明
 ├── README.md               # 项目介绍 + 快速开始
+├── 2026.9.3模块总结与不足.md # PM 复盘（非契约，仅供了解合并后的模块情况）
 ├── .editorconfig           # 编辑器统一配置
 ├── .gitignore              # git 忽略规则
 └── LICENSE                 # 许可证
 ```
 
-> **注意**：`docs/`、`daily/`、`prompts/` 三个文件夹是**老师要求的交材料目录**（存放老师给的立项文档等），**不属于开发项目的一部分**，不要在里面放/改开发代码，也不要作为接口或表结构的参考。**开发相关的唯一权威文档都在 `devdocs/`。**
+> **注意**：`docs/`、`daily/`、`prompts/` 三个文件夹是**老师要求的交材料目录**（存放老师给的立项文档、每日日志、提示词记录等），**不属于开发项目的一部分**，不要在里面放/改开发代码，也不要作为接口或表结构的参考。**开发相关的唯一权威文档都在 `devdocs/`。**
 
 ## 5. 常用命令
 
@@ -106,13 +114,16 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 - **分页**：请求 `page`(默认1) `pageSize`(默认10)；返回 `data = { list, total, page, pageSize }`。
 - **主要接口**：
   - 认证：`POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/me`、`PUT /api/auth/profile`
+  - 用户：`GET /api/users/:id`（公开信息，无需登录）
+  - 分类/标签：`GET /api/categories`、`GET /api/tags`
   - 帖子：`GET/POST /api/posts`、`GET/PUT/DELETE /api/posts/{id}`
   - 评论：`GET/POST /api/posts/{id}/comments`、`PUT/DELETE /api/comments/{id}`
-  - 互动：`POST/DELETE /api/posts/{id}/like`、`POST/DELETE /api/posts/{id}/favorite`
-  - 记录：`POST /api/posts/{id}/view`、`GET /api/me/history` 等
-  - 其他：`GET /api/categories`、`GET /api/tags`、`GET /api/recommend/posts`
-- **数据库核心表**：`users`、`categories`、`posts`、`tags`、`post_tags`、`comments`、`post_likes`、`favorites`、`histories`（+ 可选的 `user_tag_preferences`）。
+  - 互动：`POST/DELETE /api/posts/{id}/like`、`POST/DELETE /api/posts/{id}/favorite`、`POST/DELETE /api/comments/{id}/like`
+  - 记录：`POST /api/posts/{id}/view`、`GET/DELETE /api/me/history`、`GET /api/me/posts`、`GET /api/me/favorites`、`GET /api/me/likes`
+  - 其他：`POST /api/upload`（保留但**不在契约内**，见下方说明）、`GET /api/recommend/posts`（二期可选）
+- **数据库核心表**：`users`、`categories`、`posts`、`tags`、`post_tags`、`comments`、`post_likes`、`comment_likes`、`favorites`、`histories`（+ 可选的 `user_tag_preferences`）。
 - **关键业务规则**：帖子**软删除**（`is_deleted`）；帖子表 `*_count` 计数在写入时同事务更新（别每次 COUNT）；点赞/收藏/浏览记录用唯一约束防重复。
+- **关于上传**：「附件上传」是保留的旧功能，**接口契约里没有它**（帖子表也无文件字段），所以上传的 URL 目前不会随帖子保存。要真正"帖子带图"，请**先改契约**（表 + `api-protocol`）再同步全队实现。
 
 ## 7. 前端 UI 约定
 
@@ -124,7 +135,9 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 ## 8. 团队/进度背景
 
 - 4 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `devdocs/` 契约 + 统一的代码规范必须遵守。
-- 建议后端实现顺序：auth → posts → comments → like/favorite → history → recommend。
+- 当前实现进度：**auth / posts / comments / interactions(点赞收藏) / me(记录中心) 后端已全部完成并按契约实现**；前端页面基本齐全。
+- **尚未完成**：① 帖子详情页 + 评论区 UI（后端接口已就绪）；② 推荐模块 `/api/recommend/posts`（二期可选）。
+- 建议新增/修改时，先读 `devdocs/development-plan.md` 了解分工边界。
 
 ## 9. 当你被要求改代码时
 
