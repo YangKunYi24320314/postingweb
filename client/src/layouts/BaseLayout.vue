@@ -2,9 +2,13 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChatDotRound, EditPen, Clock } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { clearToken, getToken } from '../api/request'
+import { getAuthAction, logout } from '../utils/auth-navigation'
 
 const route = useRoute()
 const router = useRouter()
+const authAction = computed(() => getAuthAction(getToken()))
 
 // 侧边/顶部导航当前激活的菜单项（用当前路由路径匹配）
 const activeMenu = computed(() => route.path)
@@ -15,8 +19,16 @@ const menuItems = [
   { index: '/records', label: '记录中心', icon: Clock },
 ]
 
-function handleLogin() {
-  router.push('/login')
+function handleAuthAction() {
+  router.push(authAction.value.path)
+}
+
+function handleLogout() {
+  logout({
+    clearToken,
+    navigate: (path) => router.push(path),
+  })
+  ElMessage.success('已退出登录')
 }
 </script>
 
@@ -38,7 +50,12 @@ function handleLogin() {
         </el-menu>
 
         <div class="layout__actions">
-          <el-button type="primary" round @click="handleLogin"> 登录 </el-button>
+          <el-button type="primary" round @click="handleAuthAction">
+            {{ authAction.label }}
+          </el-button>
+          <el-button v-if="authAction.path === '/profile'" link type="info" @click="handleLogout">
+            退出登录
+          </el-button>
           <!-- TODO：有用户信息后，替换成头像下拉菜单 -->
         </div>
       </div>
