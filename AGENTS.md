@@ -112,7 +112,7 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 
 ## 8. 团队/进度背景
 
-- 5 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `docs/` 契约 + 统一的代码规范就是你协作的"护栏"。
+- 4 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `docs/` 契约 + 统一的代码规范就是你协作的"护栏"。
 - 现状：前端地基（路由/布局/设计变量/Element Plus/规范）已完成；后端只有骨架；数据库未建表；**推荐算法为二期可选项**。
 - 建议后端实现顺序：auth → posts → comments → like/favorite → history → recommend。
 
