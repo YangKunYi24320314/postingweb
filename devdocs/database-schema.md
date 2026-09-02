@@ -169,4 +169,4 @@ erDiagram
 3. **唯一约束防重复**：点赞、收藏靠 `UNIQUE` 拦重复；浏览记录靠 `UNIQUE(user_id, post_id)` 让同一帖子只留一条。
 4. **外键删帖级联**：删帖子时其点赞/收藏/评论/标签关联一起清（`ON DELETE CASCADE`）。
 5. **时间统一用 TIMESTAMPTZ**，存 `now()`，前端再按需格式化。
-6. **可执行脚本**：`docs/campushub_schema.sql` 是这套结构的可直接执行版本（含索引、CHECK 约束、种子数据），文档与脚本必须保持一致。
+6. **可执行脚本**：`devdocs/campushub_schema.sql` 是这套结构的可直接执行版本（含索引、CHECK 约束、种子数据），文档与脚本必须保持一致。

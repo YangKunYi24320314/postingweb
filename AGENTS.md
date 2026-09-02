@@ -2,7 +2,7 @@
 
 > 本文件是**给 AI 编码助手**（在全新会话里空降项目的那个 AI）的"开机说明书"。
 > 目的：让 AI 不误解上下文、少犯与团队约定冲突的错误、能直接上手改代码。
-> 人读的话，建议直接看根目录 `README.md` 和 `docs/` 下的契约文档。
+> 人读的话，建议直接看根目录 `README.md` 和 `devdocs/` 下的契约文档。
 
 ## 1. 这是什么项目（一句话）
 
@@ -12,8 +12,8 @@
 
 ## 2. 非协商规矩（AI 必须遵守的硬约束）
 
-1. **接口是一份合同**，地址/入参/出参只能以 `docs/api-protocol.md` 和 `docs/openapi.yaml` 为准，**不要自行发明**或改动接口。改接口 = 改合同 = 必须先改文档并同步全队。
-2. **数据库表结构只能以 `docs/database-schema.md` 为准**，不要在没有文档变更的情况下加列/改列。
+1. **接口是一份合同**，地址/入参/出参只能以 `devdocs/api-protocol.md` 和 `devdocs/openapi.yaml` 为准，**不要自行发明**或改动接口。改接口 = 改合同 = 必须先改文档并同步全队。
+2. **数据库表结构只能以 `devdocs/database-schema.md` 为准**，不要在没有文档变更的情况下加列/改列。
 3. **前端写样式只能用 `src/styles/tokens.css` 里的 CSS 变量**（`--brand-primary`、`--space-md` 等），禁止写死 `#xxxxxx`/`8px` 之类的魔法值。
 4. **前端页面必须放 `src/views/`，可复用组件放 `src/components/`**，不要随手在页面里塞一个"只给这一个页面用"的大组件。
 5. **前端调后端接口必须走封装层**。约定新建 `src/api/` 目录（统一 axios 封装 + 每模块一个文件），页面里禁止直接写 `fetch/axios`。
@@ -32,7 +32,7 @@
 | 后端 | Node.js + Express | express@5、cors、dotenv、pg | `server/server.js` | 3000（`process.env.PORT` 或默认） |
 | 数据库 | PostgreSQL | pg（node-postgres） | 尚未建 schema | 默认 5432 |
 
-**说明**：后端骨架已就绪（`server/utils/response.js` 统一返回、`server/middleware/auth.js` JWT 认证、`server/routes/auth.js` 是**全队参考实现**）；数据库建表脚本 `docs/campushub_schema.sql` 已提供，但**还没实际建库**（需各人本地跑一次，见 README"数据库初始化"）。
+**说明**：后端骨架已就绪（`server/utils/response.js` 统一返回、`server/middleware/auth.js` JWT 认证、`server/routes/auth.js` 是**全队参考实现**）；数据库建表脚本 `devdocs/campushub_schema.sql` 已提供，但**还没实际建库**（需各人本地跑一次，见 README"数据库初始化"）。
 
 ## 4. 仓库结构
 
@@ -60,7 +60,7 @@ postingweb/
 │   ├── middleware/auth.js  # ★ JWT 认证中间件
 │   ├── routes/             # 每模块一个文件，server.js 自动加载（auth.js 是参考实现）
 │   └── package.json
-├── docs/                   # 契约与文档
+├── devdocs/                # ★ 契约与文档（团队开发约定唯一权威）
 │   ├── database-schema.md  # ER 图 + 建表说明（唯一表结构权威）
 │   ├── api-protocol.md     # 接口协议（唯一接口权威）
 │   ├── openapi.yaml        # 可直接导入 Apifox 的 OpenAPI 规范
@@ -89,7 +89,7 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 
 项目内交互说明：前端 `client/` 与后端 `server/` 是**两个独立的 npm 包**，各自装依赖、各自启动。前端通过 `/api/...` 访问后端，跨域由后端 `cors` 中间件放开。
 
-## 6. 关键契约速查（详细版见 docs/）
+## 6. 关键契约速查（详细版见 devdocs/）
 
 - **返回包裹**：`{ code, message, data }`；`code=0` 成功。
 - **错误码**：`1001`参数错误/`1002`未登录或token失效/`1003`无权限/`1004`资源不存在/`1005`冲突重复/`5000`服务器错误。
@@ -113,13 +113,13 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 
 ## 8. 团队/进度背景
 
-- 4 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `docs/` 契约 + 统一的代码规范就是你协作的"护栏"。
+- 4 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `devdocs/` 契约 + 统一的代码规范就是你协作的"护栏"。
 - 现状：前端地基（路由/布局/设计变量/Element Plus/规范）已完成；后端只有骨架；数据库未建表；**推荐算法为二期可选项**。
 - 建议后端实现顺序：auth → posts → comments → like/favorite → history → recommend。
 
 ## 9. 给 AI 的行动指南（当你被要求改代码时）
 
-1. **先读 `docs/*.md`** 了解契约，再动手，别凭空设计。
+1. **先读 `devdocs/*.md`** 了解契约，再动手，别凭空设计。
 2. 改前端页面 → 在 `src/views/` 加/改，用 `tokens.css` 变量和 Element Plus 组件。
 3. 改后端 → 在 `server/routes/` 加一个文件、导出 `express.Router()`，路由路径以 `/` 开头（如 `/posts`）。**server.js 会自动把 routes/ 下所有文件挂到 `/api` 前缀**，所以加新模块别改 server.js（避免多人冲突）。保持 `{ code, message, data }`。
 4. 新增前端请求 → 建 `src/api/` 下的模块函数，放入统一封装，别在页面写请求。
