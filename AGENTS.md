@@ -44,6 +44,7 @@ postingweb/
 │   │   ├── App.vue         # 只放 <router-view/>
 │   │   ├── style.css       # 全局样式重置 + 公共类(.page-container/.card)
 │   │   ├── styles/tokens.css  # ★ 唯一设计变量来源（颜色/间距/圆角/阴影）
+│   │   ├── api/            # ★ 调后端的封装层（request.js 是统一封装，每模块一个文件）
 │   │   ├── layouts/BaseLayout.vue  # ★ 统一顶部导航 + 内容区，页面放在里面
 │   │   ├── router/index.js # 路由表 + 页面标题
 │   │   ├── views/          # 每个页面一个文件（Home/Posts/Records/Profile/Login…）
@@ -57,7 +58,7 @@ postingweb/
 │   ├── .env.example        # 环境变量模板（复制成 .env）
 │   ├── utils/response.js   # ★ 统一返回 ok/fail + 错误码（全队都用它）
 │   ├── middleware/auth.js  # ★ JWT 认证中间件
-│   ├── routes/             # 每个模块一个文件（auth.js 是参考实现）
+│   ├── routes/             # 每模块一个文件，server.js 自动加载（auth.js 是参考实现）
 │   └── package.json
 ├── docs/                   # 契约与文档
 │   ├── database-schema.md  # ER 图 + 建表说明（唯一表结构权威）
@@ -112,7 +113,7 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 
 ## 8. 团队/进度背景
 
-- 5 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `docs/` 契约 + 统一的代码规范就是你协作的"护栏"。
+- 4 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `docs/` 契约 + 统一的代码规范就是你协作的"护栏"。
 - 现状：前端地基（路由/布局/设计变量/Element Plus/规范）已完成；后端只有骨架；数据库未建表；**推荐算法为二期可选项**。
 - 建议后端实现顺序：auth → posts → comments → like/favorite → history → recommend。
 
@@ -120,7 +121,26 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 
 1. **先读 `docs/*.md`** 了解契约，再动手，别凭空设计。
 2. 改前端页面 → 在 `src/views/` 加/改，用 `tokens.css` 变量和 Element Plus 组件。
-3. 改后端 → 在 `server/server.js`（或后续拆分出的模块）里加路由，保持 `{ code, message, data }`。
+3. 改后端 → 在 `server/routes/` 加一个文件、导出 `express.Router()`，路由路径以 `/` 开头（如 `/posts`）。**server.js 会自动把 routes/ 下所有文件挂到 `/api` 前缀**，所以加新模块别改 server.js（避免多人冲突）。保持 `{ code, message, data }`。
 4. 新增前端请求 → 建 `src/api/` 下的模块函数，放入统一封装，别在页面写请求。
 5. 写完跑 `npm run format` + `npm run lint`（前端），确保不引入规范问题。
 6. 若不确定某个约定，**停下来问 PM/用户**，不要自己猜一个"更聪明的"实现。
+
+## 10. 前端调接口的统一方式
+
+- 所有请求都走 `src/api/request.js`（axios 封装），**页面里禁止直接写 `axios/fetch`**。
+- 每个功能模块一个文件放在 `src/api/`，例如 `auth.js` 里：
+  ```js
+  import request from './request'
+  export function login(data) {
+    return request.post('/auth/login', data) // 相对路径，以 /api 为前缀
+  }
+  ```
+- `request.js` 已自动处理三件事：**①带 token ②解开 `{code,message,data}`（调用方直接拿到 `data`）③登录失效(1002)自动清 token 跳登录页**。
+- 页面里这么用（`login()` 返回的即 `data`，不用再取 `.data`）：
+  ```js
+  const data = await login({ username, password })
+  saveToken(data.token) // token 从 src/api/request 拿
+  ```
+- `token` 存于 `localStorage`（key 为 `token`），用 `src/api/request.js` 导出的 `saveToken/getToken/clearToken` 管理。
+- 开发时 `vite.config.js` 已把 `/api` 代理到 `http://localhost:3000`，所以前端不用管跨域、也不用写死后端地址。
