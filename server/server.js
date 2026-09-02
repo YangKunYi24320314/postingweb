@@ -6,6 +6,8 @@ require('dotenv').config()
 
 const { ok, fail, CODE } = require('./utils/response')
 const authRoutes = require('./routes/auth')
+const historyRoutes = require('./routes/history')
+const meRoutes = require('./routes/me')
 
 const app = express()
 
@@ -20,6 +22,8 @@ app.get('/api/hello', (req, res) => {
 
 // 挂载各模块路由：/api/auth/...
 app.use('/api/auth', authRoutes)
+app.use('/api', historyRoutes)
+app.use('/api', meRoutes)
 
 // 没匹配到任何路由 → 404
 app.use((req, res) => {
