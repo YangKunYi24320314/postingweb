@@ -62,6 +62,16 @@ async function handleSubmit() {
         <el-form-item>
           <el-input v-model="form.username" placeholder="用户名 / 学号" size="large" />
         </el-form-item>
+        <el-form-item>
+          <el-input
+            v-model="form.password"
+            type="password"
+            placeholder="密码"
+            show-password
+            size="large"
+            @keyup.enter="handleSubmit"
+          />
+        </el-form-item>
         <el-form-item v-if="isRegister">
           <el-input
             v-model="form.confirmPassword"
@@ -74,16 +84,6 @@ async function handleSubmit() {
         </el-form-item>
         <el-form-item v-if="isRegister">
           <el-input v-model="form.nickname" placeholder="昵称（可选）" size="large" />
-        </el-form-item>
-        <el-form-item>
-          <el-input
-            v-model="form.password"
-            type="password"
-            placeholder="密码"
-            show-password
-            size="large"
-            @keyup.enter="handleSubmit"
-          />
         </el-form-item>
         <el-button
           type="primary"
