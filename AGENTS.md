@@ -60,14 +60,24 @@ postingweb/
 │   ├── middleware/auth.js  # ★ JWT 认证中间件
 │   ├── routes/             # 每模块一个文件，server.js 自动加载（auth.js 是参考实现）
 │   └── package.json
-├── devdocs/                   # 契约与文档
+├── devdocs/                # ★ 契约与文档（团队开发约定唯一权威）
 │   ├── database-schema.md  # ER 图 + 建表说明（唯一表结构权威）
 │   ├── api-protocol.md     # 接口协议（唯一接口权威）
 │   ├── openapi.yaml        # 可直接导入 Apifox 的 OpenAPI 规范
 │   ├── campushub_schema.sql# 可执行建表脚本（含索引/种子数据）
 │   └── development-plan.md # 分工 + 排期 + 边界规则
-└── README.md
+├── docs/                   # 老师要求的文件夹（存放老师立项文档，★ 非开发参考）
+├── daily/                  # 老师要求的文件夹（★ 非开发参考）
+├── prompts/                # 老师要求的文件夹（★ 非开发参考）
+├── node_modules/           # 根目录遗留文件（gitignored，无实际作用）
+├── AGENTS.md               # 给 AI 助手的项目说明
+├── README.md               # 项目介绍 + 快速开始
+├── .editorconfig           # 编辑器统一配置
+├── .gitignore              # git 忽略规则
+└── LICENSE                 # 许可证
 ```
+
+> **注意**：`docs/`、`daily/`、`prompts/` 三个文件夹是**老师要求的交材料目录**（存放老师给的立项文档等），**不属于开发项目的一部分**，不要在里面放/改开发代码，也不要作为接口或表结构的参考。**开发相关的唯一权威文档都在 `devdocs/`。**
 
 ## 5. 常用命令
 
