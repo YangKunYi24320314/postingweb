@@ -15,7 +15,7 @@ const activeMenu = computed(() => route.path)
 
 const menuItems = [
   { index: '/', label: '首页', icon: ChatDotRound },
-  { index: '/posts', label: '帖子广场', icon: EditPen },
+  { index: '/post-page', label: '帖子广场', icon: EditPen },
   { index: '/records', label: '记录中心', icon: Clock },
 ]
 
