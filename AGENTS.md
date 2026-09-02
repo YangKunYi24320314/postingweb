@@ -55,20 +55,20 @@ postingweb/
 ├── server/                 # 后端（Express）
 │   ├── server.js           # 入口：中间件 + 挂载路由 + 404/错误处理
 │   ├── db.js               # pg 连接池
-│   ├── .env.example        # 环境变量模板（复制成 .env）
-│   ├── utils/response.js   # ★ 统一返回 ok/fail + 错误码（全队都用它）
-│   ├── middleware/auth.js  # ★ JWT 认证中间件
+│   ├── .env.example        # 环境变量模板
+│   ├── utils/response.js   # 统一返回 ok/fail + 错误码
+│   ├── middleware/auth.js  # JWT 认证中间件
 │   ├── routes/             # 每模块一个文件，server.js 自动加载（auth.js 是参考实现）
 │   └── package.json
-├── devdocs/                # ★ 契约与文档（团队开发约定唯一权威）
+├── devdocs/                # 契约与文档
 │   ├── database-schema.md  # ER 图 + 建表说明（唯一表结构权威）
 │   ├── api-protocol.md     # 接口协议（唯一接口权威）
 │   ├── openapi.yaml        # 可直接导入 Apifox 的 OpenAPI 规范
 │   ├── campushub_schema.sql# 可执行建表脚本（含索引/种子数据）
 │   └── development-plan.md # 分工 + 排期 + 边界规则
-├── docs/                   # 老师要求的文件夹（存放老师立项文档，★ 非开发参考）
-├── daily/                  # 老师要求的文件夹（★ 非开发参考）
-├── prompts/                # 老师要求的文件夹（★ 非开发参考）
+├── docs/                   # 老师要求的文件夹（非开发参考）
+├── daily/                  # 老师要求的文件夹（非开发参考）
+├── prompts/                # 老师要求的文件夹（非开发参考）
 ├── node_modules/           # 根目录遗留文件（gitignored，无实际作用）
 ├── AGENTS.md               # 给 AI 助手的项目说明
 ├── README.md               # 项目介绍 + 快速开始
