@@ -1,27 +1,12 @@
 // 评论模块：列表 / 发表 / 编辑 / 删除。
-// 写法对齐 auth.js：ok/fail 统一返回、参数化查询、需要登录就挂 auth。
-// 路由挂在 /api 下，所以这里的路径是 /posts/:id/comments 和 /comments/:id
+// 写法对齐 auth.js：ok/fail 统一返回、参数化查询 $1 $2、需要登录就挂 auth。
+// 路由路径以 / 开头（如 /posts/:id/comments），server.js 会自动挂到 /api 前缀下。
 const express = require('express')
-const jwt = require('jsonwebtoken')
 const pool = require('../db')
 const { ok, fail, CODE } = require('../utils/response')
-const auth = require('../middleware/auth')
+const { auth, optionalAuth } = require('../middleware/auth')
 
 const router = express.Router()
-const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
-
-// 可选登录：有合法 token 就解析出 userId（用于返回"我是否点赞过"），没有也不报错。
-// 评论列表是公开接口，但希望知道当前用户状态，所以不用强制登录。
-function optionalAuth(req, res, next) {
-  if (!req.headers.authorization) return next()
-  const token = req.headers.authorization.replace(/^Bearer\s+/i, '')
-  try {
-    req.userId = jwt.verify(token, SECRET).userId
-  } catch (e) {
-    // 解析失败就当作未登录，不拦
-  }
-  next()
-}
 
 // 把数据库行转成前端要的格式（user 挂在对象里，和 api-protocol 对得上）
 function toComment(row) {
@@ -64,7 +49,6 @@ router.get('/posts/:id/comments', optionalAuth, async (req, res) => {
     return fail(res, CODE.PARAM_ERROR, '帖子 id 不合法')
   }
 
-  // 帖子必须存在且未删除
   const post = await pool.query('SELECT id FROM posts WHERE id = $1 AND is_deleted = false', [
     postId,
   ])

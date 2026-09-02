@@ -1,12 +1,11 @@
-// 后端入口：组装中间件 + 挂载各模块路由。
-// 每个功能模块一个文件，放在 routes/ 里，在这里 app.use 挂载即可。
+// 后端入口：组装中间件 + 自动加载 routes/ 下的所有路由。
 const express = require('express')
 const cors = require('cors')
+const fs = require('fs')
+const path = require('path')
 require('dotenv').config()
 
 const { ok, fail, CODE } = require('./utils/response')
-const authRoutes = require('./routes/auth')
-const commentRoutes = require('./routes/comments')
 
 const app = express()
 
@@ -19,11 +18,16 @@ app.get('/api/hello', (req, res) => {
   ok(res, { message: 'Hello from backend!' })
 })
 
-// 挂载各模块路由：/api/auth/...
-app.use('/api/auth', authRoutes)
-
-// 评论路由：/api/posts/:id/comments 与 /api/comments/:id（路径自带前缀，挂在 /api 下）
-app.use('/api', commentRoutes)
+// 自动加载 routes/ 下所有路由文件：
+// 每人在 routes/ 里放一个文件、导出 express.Router()，路由路径以 / 开头（如 /auth/login）。
+// 这里统一把它们挂到 /api 前缀下。好处：加新模块完全不用改这个文件，避免多人改动在 server.js 打架。
+const routesDir = path.join(__dirname, 'routes')
+fs.readdirSync(routesDir)
+  .filter((file) => file.endsWith('.js'))
+  .forEach((file) => {
+    const routeModule = require(path.join(routesDir, file))
+    app.use('/api', routeModule)
+  })
 
 // 没匹配到任何路由 → 404
 app.use((req, res) => {

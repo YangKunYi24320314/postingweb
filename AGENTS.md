@@ -58,7 +58,7 @@ postingweb/
 │   ├── .env.example        # 环境变量模板（复制成 .env）
 │   ├── utils/response.js   # ★ 统一返回 ok/fail + 错误码（全队都用它）
 │   ├── middleware/auth.js  # ★ JWT 认证中间件
-│   ├── routes/             # 每个模块一个文件（auth.js 是参考实现）
+│   ├── routes/             # 每模块一个文件，server.js 自动加载（auth.js 是参考实现）
 │   └── package.json
 ├── docs/                   # 契约与文档
 │   ├── database-schema.md  # ER 图 + 建表说明（唯一表结构权威）
@@ -121,12 +121,12 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 
 1. **先读 `docs/*.md`** 了解契约，再动手，别凭空设计。
 2. 改前端页面 → 在 `src/views/` 加/改，用 `tokens.css` 变量和 Element Plus 组件。
-3. 改后端 → 在 `server/server.js`（或后续拆分出的模块）里加路由，保持 `{ code, message, data }`。
+3. 改后端 → 在 `server/routes/` 加一个文件、导出 `express.Router()`，路由路径以 `/` 开头（如 `/posts`）。**server.js 会自动把 routes/ 下所有文件挂到 `/api` 前缀**，所以加新模块别改 server.js（避免多人冲突）。保持 `{ code, message, data }`。
 4. 新增前端请求 → 建 `src/api/` 下的模块函数，放入统一封装，别在页面写请求。
 5. 写完跑 `npm run format` + `npm run lint`（前端），确保不引入规范问题。
 6. 若不确定某个约定，**停下来问 PM/用户**，不要自己猜一个"更聪明的"实现。
 
-## 10. 前端调接口的统一方式（重点）
+## 10. 前端调接口的统一方式
 
 - 所有请求都走 `src/api/request.js`（axios 封装），**页面里禁止直接写 `axios/fetch`**。
 - 每个功能模块一个文件放在 `src/api/`，例如 `auth.js` 里：
