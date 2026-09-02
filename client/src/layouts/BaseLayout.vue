@@ -2,8 +2,9 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChatDotRound, EditPen, Clock } from '@element-plus/icons-vue'
-import { getToken } from '../api/request'
-import { getAuthAction } from '../utils/auth-navigation'
+import { ElMessage } from 'element-plus'
+import { clearToken, getToken } from '../api/request'
+import { getAuthAction, logout } from '../utils/auth-navigation'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,6 +21,14 @@ const menuItems = [
 
 function handleAuthAction() {
   router.push(authAction.value.path)
+}
+
+function handleLogout() {
+  logout({
+    clearToken,
+    navigate: (path) => router.push(path),
+  })
+  ElMessage.success('已退出登录')
 }
 </script>
 
@@ -43,6 +52,9 @@ function handleAuthAction() {
         <div class="layout__actions">
           <el-button type="primary" round @click="handleAuthAction">
             {{ authAction.label }}
+          </el-button>
+          <el-button v-if="authAction.path === '/profile'" link type="info" @click="handleLogout">
+            退出登录
           </el-button>
           <!-- TODO：有用户信息后，替换成头像下拉菜单 -->
         </div>
