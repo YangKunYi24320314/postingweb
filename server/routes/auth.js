@@ -1,14 +1,15 @@
 // 认证模块：注册 / 登录 / 个人信息的参考实现。
 // 全队写其它模块（posts/comments/...）时，照这里的三点来：
 //   1. 用 ok / fail 统一返回  →  require('../utils/response')
-//   2. 数据库用参数化查询 $1 $2，绝不拼字符串，防 SQL 注入
+//   2. 数据库用参数化查询，不拼字符串，防 SQL 注入
 //   3. 需要登录的接口在前面挂 auth 中间件  →  require('../middleware/auth')
+// 注意：路由路径以 / 开头（如 /auth/login），server.js 会自动挂到 /api 前缀下。
 const express = require('express')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const pool = require('../db')
 const { ok, fail, CODE } = require('../utils/response')
-const auth = require('../middleware/auth')
+const { auth } = require('../middleware/auth')
 
 const router = express.Router()
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
@@ -31,7 +32,7 @@ function toUser(row) {
 }
 
 // POST /api/auth/register —— 注册
-router.post('/register', async (req, res) => {
+router.post('/auth/register', async (req, res) => {
   const { username, password, nickname } = req.body || {}
 
   if (!username || !password) {
@@ -59,7 +60,7 @@ router.post('/register', async (req, res) => {
 })
 
 // POST /api/auth/login —— 登录
-router.post('/login', async (req, res) => {
+router.post('/auth/login', async (req, res) => {
   const { username, password } = req.body || {}
 
   if (!username || !password) {
@@ -81,7 +82,7 @@ router.post('/login', async (req, res) => {
 })
 
 // GET /api/auth/me —— 获取当前登录用户（需登录）
-router.get('/me', auth, async (req, res) => {
+router.get('/auth/me', auth, async (req, res) => {
   const result = await pool.query(
     'SELECT id, username, nickname, avatar_url, bio, role FROM users WHERE id = $1 AND status = 1',
     [req.userId]
@@ -93,7 +94,7 @@ router.get('/me', auth, async (req, res) => {
 })
 
 // PUT /api/auth/profile —— 更新个人信息（需登录）
-router.put('/profile', auth, async (req, res) => {
+router.put('/auth/profile', auth, async (req, res) => {
   const { nickname, bio, avatarUrl } = req.body || {}
 
   // COALESCE：传了才更新，没传就保留原值
