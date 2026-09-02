@@ -1,16 +1,16 @@
 # AGENTS.md — 给 AI 协作助手的项目说明
 
-> 本文件是**给 AI 编码助手**（在全新会话里空降项目的那个 AI）的"开机说明书"。
+> 本文件是给在全新会话里空降项目AI的快速说明。
 > 目的：让 AI 不误解上下文、少犯与团队约定冲突的错误、能直接上手改代码。
 > 人读的话，建议直接看根目录 `README.md` 和 `devdocs/` 下的契约文档。
 
-## 1. 这是什么项目（一句话）
+## 1. 这是什么项目
 
-一个给大学校园用的**发帖社区论坛** Web 应用。5 名纯新手在一门 6 天的短学期课程里从零开发，你的任务是尽可能帮他们写出**一致、可运行、新手看得懂**的代码。
+一个给大学校园用的**发帖社区论坛** Web 应用。5 名新手在一门 6 天的短学期课程里从零开发，你的任务是尽可能帮他们写出**一致、可运行、新手看得懂**的代码。
 
 **核心功能模块**：用户与认证、帖子（发布/删除/筛选/搜索）、互动（评论/点赞/收藏）、记录中心（浏览历史/个人记录）、推荐（可选，基于标签的简化推荐）。
 
-## 2. 非协商规矩（AI 必须遵守的硬约束）
+## 2. 必须遵守的硬约束
 
 1. **接口是一份合同**，地址/入参/出参只能以 `devdocs/api-protocol.md` 和 `devdocs/openapi.yaml` 为准，**不要自行发明**或改动接口。改接口 = 改合同 = 必须先改文档并同步全队。
 2. **数据库表结构只能以 `devdocs/database-schema.md` 为准**，不要在没有文档变更的情况下加列/改列。
@@ -55,19 +55,29 @@ postingweb/
 ├── server/                 # 后端（Express）
 │   ├── server.js           # 入口：中间件 + 挂载路由 + 404/错误处理
 │   ├── db.js               # pg 连接池
-│   ├── .env.example        # 环境变量模板（复制成 .env）
-│   ├── utils/response.js   # ★ 统一返回 ok/fail + 错误码（全队都用它）
-│   ├── middleware/auth.js  # ★ JWT 认证中间件
+│   ├── .env.example        # 环境变量模板
+│   ├── utils/response.js   # 统一返回 ok/fail + 错误码
+│   ├── middleware/auth.js  # JWT 认证中间件
 │   ├── routes/             # 每模块一个文件，server.js 自动加载（auth.js 是参考实现）
 │   └── package.json
-├── devdocs/                # ★ 契约与文档（团队开发约定唯一权威）
+├── devdocs/                # 契约与文档
 │   ├── database-schema.md  # ER 图 + 建表说明（唯一表结构权威）
 │   ├── api-protocol.md     # 接口协议（唯一接口权威）
 │   ├── openapi.yaml        # 可直接导入 Apifox 的 OpenAPI 规范
 │   ├── campushub_schema.sql# 可执行建表脚本（含索引/种子数据）
 │   └── development-plan.md # 分工 + 排期 + 边界规则
-└── README.md
+├── docs/                   # 老师要求的文件夹（非开发参考）
+├── daily/                  # 老师要求的文件夹（非开发参考）
+├── prompts/                # 老师要求的文件夹（非开发参考）
+├── node_modules/           # 根目录遗留文件（gitignored，无实际作用）
+├── AGENTS.md               # 给 AI 助手的项目说明
+├── README.md               # 项目介绍 + 快速开始
+├── .editorconfig           # 编辑器统一配置
+├── .gitignore              # git 忽略规则
+└── LICENSE                 # 许可证
 ```
+
+> **注意**：`docs/`、`daily/`、`prompts/` 三个文件夹是**老师要求的交材料目录**（存放老师给的立项文档等），**不属于开发项目的一部分**，不要在里面放/改开发代码，也不要作为接口或表结构的参考。**开发相关的唯一权威文档都在 `devdocs/`。**
 
 ## 5. 常用命令
 
@@ -113,15 +123,14 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 
 ## 8. 团队/进度背景
 
-- 4 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `devdocs/` 契约 + 统一的代码规范就是你协作的"护栏"。
-- 现状：前端地基（路由/布局/设计变量/Element Plus/规范）已完成；后端只有骨架；数据库未建表；**推荐算法为二期可选项**。
+- 4 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `docs/` 契约 + 统一的代码规范必须遵守。
 - 建议后端实现顺序：auth → posts → comments → like/favorite → history → recommend。
 
-## 9. 给 AI 的行动指南（当你被要求改代码时）
+## 9. 当你被要求改代码时
 
 1. **先读 `devdocs/*.md`** 了解契约，再动手，别凭空设计。
 2. 改前端页面 → 在 `src/views/` 加/改，用 `tokens.css` 变量和 Element Plus 组件。
-3. 改后端 → 在 `server/routes/` 加一个文件、导出 `express.Router()`，路由路径以 `/` 开头（如 `/posts`）。**server.js 会自动把 routes/ 下所有文件挂到 `/api` 前缀**，所以加新模块别改 server.js（避免多人冲突）。保持 `{ code, message, data }`。
+3. 改后端 → 在 `server/routes/` 加一个文件、导出 `express.Router()`，路由路径以 `/` 开头（如 `/posts`）。**server.js 会自动把 routes/ 下所有文件挂到 `/api` 前缀**，所以加新模块别改 server.js。保持 `{ code, message, data }`。
 4. 新增前端请求 → 建 `src/api/` 下的模块函数，放入统一封装，别在页面写请求。
 5. 写完跑 `npm run format` + `npm run lint`（前端），确保不引入规范问题。
 6. 若不确定某个约定，**停下来问 PM/用户**，不要自己猜一个"更聪明的"实现。
