@@ -10,14 +10,28 @@ const form = reactive({
   username: '',
   password: '',
   nickname: '',
+  confirmPassword: '',
 })
 const loading = ref(false)
 const isRegister = ref(false)
 const pageTitle = computed(() => (isRegister.value ? '注册' : '登录'))
 
 async function handleSubmit() {
-  if (!form.username || !form.password) {
+  const username = form.username.trim()
+  if (!username || !form.password) {
     ElMessage.warning('请输入账号和密码')
+    return
+  }
+  if (username.length < 3 || username.length > 50) {
+    ElMessage.warning('用户名长度应为 3-50 位')
+    return
+  }
+  if (form.password.length < 6) {
+    ElMessage.warning('密码长度不能少于 6 位')
+    return
+  }
+  if (isRegister.value && form.password !== form.confirmPassword) {
+    ElMessage.warning('两次输入的密码不一致')
     return
   }
   loading.value = true
@@ -25,8 +39,8 @@ async function handleSubmit() {
     // login() 走统一封装：返回的 data 里就是 { token, user }
     const action = isRegister.value ? register : login
     const payload = isRegister.value
-      ? { username: form.username, password: form.password, nickname: form.nickname }
-      : { username: form.username, password: form.password }
+      ? { username, password: form.password, nickname: form.nickname.trim() }
+      : { username, password: form.password }
     const data = await action(payload)
     saveToken(data.token)
     ElMessage.success(isRegister.value ? '注册成功' : '登录成功')
@@ -49,6 +63,16 @@ async function handleSubmit() {
           <el-input v-model="form.username" placeholder="用户名 / 学号" size="large" />
         </el-form-item>
         <el-form-item v-if="isRegister">
+          <el-input
+            v-model="form.confirmPassword"
+            type="password"
+            placeholder="确认密码"
+            show-password
+            size="large"
+            @keyup.enter="handleSubmit"
+          />
+        </el-form-item>
+        <el-form-item v-if="isRegister">
           <el-input v-model="form.nickname" placeholder="昵称（可选）" size="large" />
         </el-form-item>
         <el-form-item>
@@ -58,6 +82,7 @@ async function handleSubmit() {
             placeholder="密码"
             show-password
             size="large"
+            @keyup.enter="handleSubmit"
           />
         </el-form-item>
         <el-button

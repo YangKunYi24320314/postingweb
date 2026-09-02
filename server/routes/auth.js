@@ -10,6 +10,7 @@ const jwt = require('jsonwebtoken')
 const pool = require('../db')
 const { ok, fail, CODE } = require('../utils/response')
 const { auth } = require('../middleware/auth')
+const { validateCredentials, normalizeNickname } = require('../utils/auth-validation')
 
 const router = express.Router()
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
@@ -31,46 +32,23 @@ function toUser(row) {
   }
 }
 
-// GET /api/users/:id —— 查看用户公开信息（无需登录）
-router.get('/users/:id', async (req, res) => {
-  const userId = Number(req.params.id)
-  if (!Number.isInteger(userId) || userId <= 0) {
-    return fail(res, CODE.PARAM_ERROR, '用户 id 不合法')
-  }
-
-  const result = await pool.query(
-    `SELECT u.id, u.nickname, u.avatar_url, u.bio,
-            COUNT(p.id)::int AS post_count
-     FROM users u
-     LEFT JOIN posts p ON p.user_id = u.id AND p.is_deleted = false AND p.status = 1
-     WHERE u.id = $1 AND u.status = 1
-     GROUP BY u.id`,
-    [userId]
-  )
-  if (result.rowCount === 0) {
-    return fail(res, CODE.NOT_FOUND, '用户不存在', 404)
-  }
-
-  const row = result.rows[0]
-  return ok(res, {
-    id: row.id,
-    nickname: row.nickname,
-    avatarUrl: row.avatar_url,
-    bio: row.bio,
-    postCount: row.post_count,
-  })
-})
-
 // POST /api/auth/register —— 注册
 router.post('/auth/register', async (req, res) => {
   const { username, password, nickname } = req.body || {}
-
-  if (!username || !password) {
-    return fail(res, CODE.PARAM_ERROR, '用户名和密码不能为空')
+  let credentials
+  try {
+    credentials = validateCredentials(username, password)
+  } catch (error) {
+    if (error.code === 'AUTH_VALIDATION') {
+      return fail(res, CODE.PARAM_ERROR, error.message)
+    }
+    throw error
   }
 
   // 先查重：用户名已被占用则直接返回冲突错误
-  const exists = await pool.query('SELECT id FROM users WHERE username = $1', [username])
+  const exists = await pool.query('SELECT id FROM users WHERE username = $1', [
+    credentials.username,
+  ])
   if (exists.rowCount > 0) {
     return fail(res, CODE.CONFLICT, '用户名已被占用')
   }
@@ -82,7 +60,7 @@ router.post('/auth/register', async (req, res) => {
     `INSERT INTO users (username, password_hash, nickname)
      VALUES ($1, $2, $3)
      RETURNING id, username, nickname, avatar_url, bio, role`,
-    [username, passwordHash, nickname || username]
+    [credentials.username, passwordHash, normalizeNickname(credentials.username, nickname)]
   )
 
   const user = result.rows[0]
@@ -92,18 +70,23 @@ router.post('/auth/register', async (req, res) => {
 // POST /api/auth/login —— 登录
 router.post('/auth/login', async (req, res) => {
   const { username, password } = req.body || {}
-
-  if (!username || !password) {
-    return fail(res, CODE.PARAM_ERROR, '用户名和密码不能为空')
+  let credentials
+  try {
+    credentials = validateCredentials(username, password)
+  } catch (error) {
+    if (error.code === 'AUTH_VALIDATION') {
+      return fail(res, CODE.PARAM_ERROR, error.message)
+    }
+    throw error
   }
 
-  const result = await pool.query('SELECT * FROM users WHERE username = $1', [username])
+  const result = await pool.query('SELECT * FROM users WHERE username = $1', [credentials.username])
   if (result.rowCount === 0) {
     return fail(res, CODE.UNAUTHORIZED, '用户名或密码错误', 401)
   }
 
   const user = result.rows[0]
-  const match = await bcrypt.compare(password, user.password_hash)
+  const match = await bcrypt.compare(credentials.password, user.password_hash)
   if (!match) {
     return fail(res, CODE.UNAUTHORIZED, '用户名或密码错误', 401)
   }
@@ -125,7 +108,7 @@ router.get('/auth/me', auth, async (req, res) => {
 
 // PUT /api/auth/profile —— 更新个人信息（需登录）
 router.put('/auth/profile', auth, async (req, res) => {
-  const { nickname, bio, avatarUrl, avatar_url: avatarUrlSnake } = req.body || {}
+  const { nickname, bio, avatarUrl } = req.body || {}
 
   // COALESCE：传了才更新，没传就保留原值
   const result = await pool.query(
@@ -135,7 +118,7 @@ router.put('/auth/profile', auth, async (req, res) => {
          avatar_url = COALESCE($3, avatar_url)
      WHERE id = $4
      RETURNING id, username, nickname, avatar_url, bio, role`,
-    [nickname || null, bio || null, avatarUrl || avatarUrlSnake || null, req.userId]
+    [nickname || null, bio || null, avatarUrl || null, req.userId]
   )
 
   if (result.rowCount === 0) {
