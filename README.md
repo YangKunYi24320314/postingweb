@@ -3,7 +3,7 @@
 一个给大学校园用的**发帖社区论坛** Web 应用，短学期课程里从零协作开发。
 
 > **给 AI 的说明书在 [`AGENTS.md`](./AGENTS.md)**，新开 AI 会话请先读它。
-> 给团队的正式契约在 [`docs/`](./docs/) 目录，改代码前务必先读。
+> 给团队的正式契约在 [`devdocs/`](./devdocs/) 目录，改代码前务必先读。
 
 ---
 
@@ -30,7 +30,7 @@
 postingweb/
 ├── client/      # 前端（Vue3 + Vite，独立 npm 包）
 ├── server/      # 后端（Express，独立 npm 包）
-├── docs/        # 契约文档（ER图 / 接口协议 / OpenAPI）
+├── devdocs/     # ★ 契约文档（ER图 / 接口协议 / OpenAPI）
 └── AGENTS.md    # ★ AI 协作说明书（新 AI 会话先读它）
 ```
 
@@ -52,14 +52,14 @@ npm run dev      # http://localhost:3000
 
 ### 数据库初始化（第一次跑之前必须做）
 
-后端通过 `pg` 连 PostgreSQL，表结构脚本在 `docs/campushub_schema.sql`。步骤如下：
+后端通过 `pg` 连 PostgreSQL，表结构脚本在 `devdocs/campushub_schema.sql`。步骤如下：
 
 ```bash
 # 1. 先安装并启动 PostgreSQL，然后在终端建库
 psql -U postgres -c "CREATE DATABASE campushub;"
 
 # 2. 给刚建的库执行建表脚本（含表、索引、种子数据）
-psql -U postgres -d campushub -f docs/campushub_schema.sql
+psql -U postgres -d campushub -f devdocs/campushub_schema.sql
 
 # 3. 在 server/ 下把 .env.example 复制成 .env，填你的数据库账号密码
 #    Windows: copy .env.example .env    Linux/macOS: cp .env.example .env

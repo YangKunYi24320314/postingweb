@@ -1,6 +1,6 @@
 # 并行开发计划
 
-> 前提：契约已冻结（`docs/database-schema.md`、`docs/api-protocol.md`、`docs/openapi.yaml`），
+> 前提：契约已冻结（`devdocs/database-schema.md`、`devdocs/api-protocol.md`、`devdocs/openapi.yaml`），
 > 后端参考模块（`server/routes/auth.js` + `utils/response.js` + `middleware/auth.js`）已就绪。
 > 大家**严格照 `auth.js` 的写法**写自己的模块，风格就统一了。
 
@@ -19,8 +19,8 @@ auth(参考/已有) → categories/tags(无依赖，先做) → posts → commen
 
 ## 三、关键边界
 
-1. **接口地址/字段只能按 `docs/api-protocol.md`**，新增=改合同=必须开会同步。
-2. **表结构只能按 `docs/database-schema.md`**，加列=先改文档。
+1. **接口地址/字段只能按 `devdocs/api-protocol.md`**，新增=改合同=必须开会同步。
+2. **表结构只能按 `devdocs/database-schema.md`**，加列=先改文档。
 3. 每个路由文件 = `express.Router()` + 用 `ok/fail` + 参数化查询 + 需要登录就挂 `auth`。**照抄 `auth.js`。**
 4. 前端页面放 `client/src/views/`，请求全部走 `src/api/xxx.js`，**页面里禁止直接 `fetch/axios`**。
 
