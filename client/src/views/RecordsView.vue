@@ -39,6 +39,10 @@ async function loadHistory() {
   }
 }
 
+function goPost(row) {
+  router.push(`/post/${row.id}`)
+}
+
 // 翻页：换页后重新拉数据
 function handlePageChange(p) {
   page.value = p
@@ -88,7 +92,7 @@ onMounted(() => {
         </el-popconfirm>
       </div>
 
-      <el-table v-loading="loading" :data="list" empty-text="暂无浏览记录">
+      <el-table v-loading="loading" :data="list" empty-text="暂无浏览记录" @row-click="goPost">
         <el-table-column prop="title" label="帖子标题" min-width="200" />
         <el-table-column label="作者" width="140">
           <template #default="{ row }">
@@ -119,6 +123,9 @@ onMounted(() => {
 </template>
 
 <style scoped>
+:deep(.el-table__row) {
+  cursor: pointer;
+}
 .records__topbar {
   margin-bottom: var(--space-md);
 }

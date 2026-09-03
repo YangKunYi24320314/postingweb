@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getMyPosts, getMyFavorites, getMyLikes } from '../api/record'
 import RecentHistoryPreview from '../components/RecentHistoryPreview.vue'
+import { useRouter } from 'vue-router'
 
 const activeTab = ref('posts') // 当前激活的页签
 const list = ref([])
@@ -10,8 +11,14 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
 const loading = ref(false)
+const router = useRouter()
 
+// 点击行 → 跳到帖子详情
+function goPost(row) {
+  router.push(`/post/${row.id}`)
+}
 // 页签名 → 对应的接口函数（一个对象把"三个页签"和"三个接口"对应起来）
+
 const fetchers = {
   posts: getMyPosts,
   favorites: getMyFavorites,
@@ -66,7 +73,7 @@ onMounted(loadList)
         <el-tab-pane label="我点赞的" name="likes" />
       </el-tabs>
 
-      <el-table v-loading="loading" :data="list" empty-text="暂无内容">
+      <el-table v-loading="loading" :data="list" empty-text="暂无内容" @row-click="goPost">
         <el-table-column prop="title" label="帖子标题" min-width="200" />
         <el-table-column label="作者" width="140">
           <template #default="{ row }">{{ row.author?.nickname || '匿名用户' }}</template>
@@ -94,6 +101,9 @@ onMounted(loadList)
 </template>
 
 <style scoped>
+:deep(.el-table__row) {
+  cursor: pointer;
+}
 .profile__title {
   font-size: 18px;
   color: var(--text-primary);
