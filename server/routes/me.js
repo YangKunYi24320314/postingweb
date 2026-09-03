@@ -121,9 +121,9 @@ router.get('/me/likes', auth, async (req, res) => {
 })
 
 // ---------- 头像上传（个人中心用） ----------
-// 头像存到 server/static，由 server.js 的 /static 静态托管访问
+// 头像存到 server/static/avatars，由 server.js 的 /static 静态托管访问（/static/avatars/xxx）
 const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../static')),
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '../static/avatars')),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname) || '.png'
     cb(null, `avatar-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`)
@@ -137,7 +137,7 @@ router.post('/me/avatar', auth, avatarUpload.single('file'), (req, res) => {
     return fail(res, CODE.PARAM_ERROR, '未接收到图片')
   }
   // 拼绝对地址，前端 <img> 直接访问（无需经过 vite 代理）
-  const url = `${req.protocol}://${req.get('host')}/static/${req.file.filename}`
+  const url = `${req.protocol}://${req.get('host')}/static/avatars/${req.file.filename}`
   return ok(res, { url })
 })
 

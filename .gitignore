@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 #忽略本地文件
 server/static/attachments/*
 !server/static/attachments/.gitkeep
+# 头像上传目录（本地文件不入库，用 .gitkeep 保留目录）
+server/static/avatars/*
+!server/static/avatars/.gitkeep
