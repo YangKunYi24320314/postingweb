@@ -114,7 +114,9 @@ onMounted(async () => {
 
       <div v-for="item in list" :key="item.id" class="post-card">
         <div class="post-card__head">
-          <h3 class="post-card__title">{{ item.title }}</h3>
+          <router-link :to="`/post/${item.id}`" class="post-card__title-link">
+            <h3 class="post-card__title">{{ item.title }}</h3>
+          </router-link>
           <span class="post-card__category">{{ categoryName(item.categoryId) }}</span>
         </div>
 
@@ -202,9 +204,18 @@ onMounted(async () => {
   gap: var(--space-sm);
 }
 
+.post-card__title-link {
+  cursor: pointer;
+  min-width: 0;
+}
+
 .post-card__title {
   font-size: 17px;
   color: var(--text-primary);
+}
+
+.post-card__title-link:hover .post-card__title {
+  color: var(--brand-primary);
 }
 
 .post-card__category {

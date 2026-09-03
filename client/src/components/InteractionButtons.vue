@@ -54,7 +54,12 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['update:liked', 'update:likeCount', 'update:favorited', 'update:favoriteCount'])
+const emit = defineEmits([
+  'update:liked',
+  'update:likeCount',
+  'update:favorited',
+  'update:favoriteCount',
+])
 
 const innerLiked = ref(props.liked)
 const innerLikeCount = ref(props.likeCount)
@@ -69,28 +74,28 @@ watch(
   () => props.liked,
   (value) => {
     innerLiked.value = value
-  },
+  }
 )
 
 watch(
   () => props.likeCount,
   (value) => {
     innerLikeCount.value = value
-  },
+  }
 )
 
 watch(
   () => props.favorited,
   (value) => {
     innerFavorited.value = value
-  },
+  }
 )
 
 watch(
   () => props.favoriteCount,
   (value) => {
     innerFavoriteCount.value = value
-  },
+  }
 )
 
 function isValidId(id) {
