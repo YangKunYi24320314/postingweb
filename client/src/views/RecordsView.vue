@@ -1,7 +1,20 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { ArrowLeft } from '@element-plus/icons-vue'
 import { getHistory, clearHistory } from '../api/record'
+
+const router = useRouter()
+
+// 返回上一个页面：浏览器有上一页就返回；没有（比如直接输入网址进来的）就回个人中心
+function goBack() {
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+    router.push('/profile')
+  }
+}
 
 // 页面数据（都用 ref 包起来，改了自动更新界面）
 const list = ref([])        // 表格要显示的行
@@ -60,6 +73,11 @@ onMounted(() => {
 
 <template>
   <div class="page-container">
+    <!-- 左上角返回按钮 -->
+    <div class="records__topbar">
+      <el-button :icon="ArrowLeft" plain round @click="goBack">返回</el-button>
+    </div>
+
     <el-card shadow="never">
       <div class="records__header">
         <h2 class="records__title">我的浏览记录</h2>
@@ -101,6 +119,9 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.records__topbar {
+  margin-bottom: var(--space-md);
+}
 .records__header {
   display: flex;
   justify-content: space-between;
