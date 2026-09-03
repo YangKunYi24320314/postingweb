@@ -6,6 +6,7 @@ import { MoreFilled, Edit, View, ChatDotRound, Pointer, Search } from '@element-
 import { getMe, updateProfile } from '../api/auth'
 import { getMyPosts, getMyFavorites, getMyLikes, uploadAvatar } from '../api/record'
 import RecentHistoryPreview from '../components/RecentHistoryPreview.vue'
+import AvatarCropper from '../components/AvatarCropper.vue'
 
 const router = useRouter()
 
@@ -33,6 +34,10 @@ const fileInput = ref(null)
 
 // 头像全图预览
 const avatarPreviewVisible = ref(false)
+
+// 头像裁剪弹窗
+const cropVisible = ref(false) // 裁剪弹窗是否显示
+const cropImageSrc = ref('') // 待裁剪的原图（data URL）
 
 // 页签名 → 对应的接口函数
 const fetchers = {
@@ -152,8 +157,8 @@ function triggerUpload() {
   fileInput.value?.click()
 }
 
-// 选择文件后上传，把返回的 URL 回显到预览
-async function handleFileChange(e) {
+// 选择文件后：读成 data URL，交给裁剪弹窗（裁剪后再上传）
+function handleFileChange(e) {
   const file = e.target.files[0]
   if (!file) return
   if (!file.type.startsWith('image/')) {
@@ -161,18 +166,29 @@ async function handleFileChange(e) {
     e.target.value = ''
     return
   }
-  const formData = new FormData()
-  formData.append('file', file)
+  const reader = new FileReader()
+  reader.onload = () => {
+    cropImageSrc.value = reader.result
+    cropVisible.value = true
+  }
+  reader.readAsDataURL(file)
+  e.target.value = '' // 清空，允许重复选同一文件
+}
+
+// 裁剪弹窗确定后：上传裁剪后的图片
+async function handleCropped(blob) {
   uploadingAvatar.value = true
   try {
+    const formData = new FormData()
+    formData.append('file', blob, 'avatar.jpg')
     const data = await uploadAvatar(formData)
     editForm.avatarUrl = data.url
+    cropVisible.value = false
     ElMessage.success('头像上传成功')
   } catch (err) {
     ElMessage.error(err.message || '头像上传失败')
   } finally {
     uploadingAvatar.value = false
-    e.target.value = '' // 清空，允许重复选同一文件
   }
 }
 
@@ -335,6 +351,14 @@ onMounted(() => {
         <img :src="user?.avatarUrl" class="avatar-viewer__img" alt="头像大图" />
       </div>
     </transition>
+
+    <!-- 头像裁剪弹窗 -->
+    <AvatarCropper
+      v-model="cropVisible"
+      :image-src="cropImageSrc"
+      :loading="uploadingAvatar"
+      @confirm="handleCropped"
+    />
   </div>
 </template>
 
