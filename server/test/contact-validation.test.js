@@ -29,6 +29,7 @@ test('contact validators reject malformed phone and email targets', () => {
 })
 
 test('login identifier normalizes username, phone, and email values', () => {
+  assert.deepEqual(normalizeLoginIdentifier('111'), { type: 'username', value: '111' })
   assert.deepEqual(normalizeLoginIdentifier('  scu123 '), { type: 'username', value: 'scu123' })
   assert.deepEqual(normalizeLoginIdentifier(' 13800138000 '), {
     type: 'phone',
