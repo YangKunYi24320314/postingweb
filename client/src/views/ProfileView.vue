@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { MoreFilled, Edit, View, ChatDotRound, Pointer, Search } from '@element-plus/icons-vue'
 import { getMe, updateProfile } from '../api/auth'
-import { getMyPosts, getMyFavorites, getMyLikes, uploadAvatar } from '../api/record'
+import { getMyPosts, getMyFavorites, getMyLikes, uploadAvatar, getMeStats } from '../api/record'
 import RecentHistoryPreview from '../components/RecentHistoryPreview.vue'
 import AvatarCropper from '../components/AvatarCropper.vue'
 
@@ -12,6 +12,8 @@ const router = useRouter()
 
 // 当前登录用户信息（个人信息区用）
 const user = ref(null)
+// 收获统计（获赞总数 / 获收藏总数）
+const stats = ref(null)
 
 // 我的内容（三个页签）
 const activeTab = ref('posts')
@@ -120,6 +122,15 @@ async function loadMe() {
   }
 }
 
+// 加载收获统计
+async function loadStats() {
+  try {
+    stats.value = await getMeStats()
+  } catch {
+    stats.value = null // 加载失败时显示占位 0
+  }
+}
+
 // 打开编辑弹窗：回显当前信息
 function openEdit() {
   editForm.nickname = user.value?.nickname || ''
@@ -204,6 +215,7 @@ function closeAvatarPreview() {
 onMounted(() => {
   loadList()
   loadMe()
+  loadStats()
 })
 </script>
 
@@ -234,6 +246,16 @@ onMounted(() => {
       <div class="info__nickname">{{ user?.nickname || '未设置昵称' }}</div>
       <div class="info__username">{{ user ? '@' + user.username : '' }}</div>
       <div class="info__bio">{{ user?.bio || '这个人很懒，什么都没有写' }}</div>
+      <div class="profile__stats">
+        <div class="profile__stat">
+          <div class="profile__stat-label">收获的赞</div>
+          <div class="profile__stat-value">{{ stats?.totalLikes ?? 0 }}</div>
+        </div>
+        <div class="profile__stat">
+          <div class="profile__stat-label">收获收藏</div>
+          <div class="profile__stat-value">{{ stats?.totalFavorites ?? 0 }}</div>
+        </div>
+      </div>
     </el-card>
 
     <!-- 我的内容（三个页签） -->
@@ -432,6 +454,23 @@ onMounted(() => {
   margin-top: var(--space-lg);
   font-size: 15px;
   color: var(--text-regular);
+}
+.profile__stats {
+  display: flex;
+  justify-content: space-evenly;
+  margin-top: var(--space-lg);
+  border-top: 1px solid var(--border-color-light);
+  padding-top: var(--space-md);
+}
+.profile__stat-label {
+  font-size: 12px;
+  color: var(--text-placeholder);
+}
+.profile__stat-value {
+  margin-top: var(--space-xs);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 /* 个人主页帖子卡片（对齐帖子广场的 post-card 样式） */

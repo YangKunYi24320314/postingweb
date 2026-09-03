@@ -36,3 +36,8 @@ export function getMyLikes(params) {
 export function uploadAvatar(formData) {
   return request.post('/me/avatar', formData)
 }
+
+// 我的收获统计（获赞总数 / 获收藏总数）
+export function getMeStats() {
+  return request.get('/me/stats')
+}

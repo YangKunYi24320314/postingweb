@@ -188,6 +188,22 @@ router.get('/me/likes', auth, async (req, res) => {
   return ok(res, { list: mapped, total, page, pageSize })
 })
 
+// GET /api/me/stats —— 我的帖子收获统计（获赞总数 / 获收藏总数，需登录）
+router.get('/me/stats', auth, async (req, res) => {
+  const result = await pool.query(
+    `SELECT COALESCE(SUM(like_count), 0)::int AS total_likes,
+            COALESCE(SUM(favorite_count), 0)::int AS total_favorites
+     FROM posts
+     WHERE user_id = $1 AND is_deleted = false`,
+    [req.userId]
+  )
+  const row = result.rows[0]
+  return ok(res, {
+    totalLikes: row.total_likes,
+    totalFavorites: row.total_favorites,
+  })
+})
+
 // ---------- 头像上传（个人中心用） ----------
 // 头像存到 server/static/avatars，由 server.js 的 /static 静态托管访问（/static/avatars/xxx）
 const avatarStorage = multer.diskStorage({

@@ -224,6 +224,17 @@
 
 > 头像文件存到后端 `server/static/avatars/`，前端用返回的 `url` 直接显示（通过 `/static/avatars/...` 访问）。
 
+### 7.4 收获统计
+- `GET /me/stats`（需登录）— 我发布的帖子收获的赞/收藏总数
+
+**响应 data**：
+
+```json
+{ "totalLikes": 12, "totalFavorites": 5 }
+```
+
+> `totalLikes` = 我所有帖子的 `like_count` 之和；`totalFavorites` = 我所有帖子的 `favorite_count` 之和（只统计未删除的帖子）。
+
 ---
 
 ## 八、附件 Attachments（帖子附件）

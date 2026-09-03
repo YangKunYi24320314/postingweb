@@ -643,6 +643,26 @@ paths:
                         properties:
                           url: { type: string, example: "http://host/static/avatars/avatar-xxx.png" }
 
+  /me/stats:
+    get:
+      tags: [记录中心]
+      summary: 我的收获统计（获赞总数 / 获收藏总数）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalLikes: { type: integer, example: 12 }
+                          totalFavorites: { type: integer, example: 5 }
+
   # ======================= 附件 =======================
   /attachments/upload:
     post:
