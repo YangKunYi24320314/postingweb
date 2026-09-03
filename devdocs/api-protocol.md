@@ -59,14 +59,14 @@
 ### 2.2 `POST /auth/login` — 登录
 **请求**
 ```json
-{ "username": "scu123", "password": "123456" }
+{ "identifier": "scu123 / 13800138000 / user@example.com", "password": "123456" }
 ```
-**响应 data**：同上，返回 token + user。
+**响应 data**：同上，返回 token + user。为兼容旧前端，也接受 `username` 作为 `identifier`。
 
 ### 2.3 `GET /auth/me` — 获取当前登录用户（需登录）
 **响应 data**
 ```json
-{ "id": 1, "username": "scu123", "nickname": "东门猛男", "avatar_url": "...", "bio": "...", "role": "user" }
+{ "id": 1, "username": "scu123", "avatarUrl": "...", "bio": "...", "role": "user", "phone": "138****8000", "email": "u***@example.com", "phoneBound": true, "emailBound": true }
 ```
 
 ### 2.4 `PUT /auth/profile` — 更新个人信息（需登录）
@@ -76,7 +76,36 @@
 ```
 **响应 data**：更新后的用户信息。
 
-### 2.5 `GET /users/:id` — 查看某用户公开信息（无需登录）
+### 2.5 `POST /auth/contact/send-code` — 发送绑定验证码（需登录）
+**请求**
+```json
+{ "channel": "phone", "target": "13800138000" }
+```
+`channel` 可选 `phone` 或 `email`。短信由阿里云 SMS 发送，邮件由 SMTP 发送。
+
+### 2.6 `POST /auth/contact/bind` — 绑定手机号或邮箱（需登录）
+**请求**
+```json
+{ "channel": "email", "target": "user@example.com", "code": "123456" }
+```
+
+### 2.7 `POST /auth/password/change` — 修改密码（需登录）
+**请求**
+```json
+{ "currentPassword": "123456", "newPassword": "654321" }
+```
+**响应 data**：`{ "token": "xxx", "user": { ... } }`。
+
+### 2.8 `POST /auth/password/reset/send-code` — 发送找回密码验证码（无需登录）
+**请求**：同 2.5。无论目标是否绑定账号，都返回相同成功文案，避免账号枚举。
+
+### 2.9 `POST /auth/password/reset` — 验证码找回密码（无需登录）
+**请求**
+```json
+{ "channel": "phone", "target": "13800138000", "code": "123456", "newPassword": "654321" }
+```
+
+### 2.10 `GET /users/:id` — 查看某用户公开信息（无需登录）
 **响应 data**：该用户的 id / nickname / avatar_url / bio / post 数量。
 
 ---

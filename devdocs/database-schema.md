@@ -41,11 +41,27 @@ erDiagram
 | nickname | VARCHAR(50) | 可空 | 显示昵称 |
 | avatar_url | VARCHAR(500) | 可空 | 头像链接 |
 | email | VARCHAR(100) | 唯一,可空 | 邮箱 |
+| phone | VARCHAR(20) | 唯一,可空 | 中国大陆手机号 |
 | bio | VARCHAR(255) | 可空 | 个人简介 |
 | role | VARCHAR(20) | 默认 'user' | user / admin |
 | status | SMALLINT | 默认 1 | 1=正常 0=封禁 |
 | created_at | TIMESTAMPTZ | 默认 now() | |
 | updated_at | TIMESTAMPTZ | 默认 now() | |
+
+### verification_codes — 联系方式验证码表
+> 绑定手机号/邮箱和找回密码使用；验证码只保存 SHA-256 哈希，成功验证后立即标记为已消费。
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | BIGINT | PK,自增 | |
+| user_id | BIGINT | FK→users,非空,ON DELETE CASCADE | 发码/验证的用户 |
+| channel | VARCHAR(10) | 非空 | `phone` / `email` |
+| target | VARCHAR(100) | 非空 | 规范化后的手机号或邮箱 |
+| purpose | VARCHAR(30) | 非空 | `bind` / `password_reset` |
+| code_hash | VARCHAR(64) | 非空 | 验证码 SHA-256 哈希 |
+| expires_at | TIMESTAMPTZ | 非空 | 发送后 5 分钟过期 |
+| attempts | SMALLINT | 默认 0 | 最多验证 5 次 |
+| consumed_at | TIMESTAMPTZ | 可空 | 成功或失效后写入 |
+| created_at | TIMESTAMPTZ | 默认 now() | |
 
 ## 三、帖子核心
 
