@@ -25,6 +25,7 @@ const loading = ref(false) // 是否加载中
 const keyword = ref('') // 搜索关键词（标题/正文/作者）
 let searchTimer = null // 防抖定时器
 let requestSeq = 0 // 请求序号：用于丢弃过期的旧请求结果
+const listVersion = ref(0) // 列表版本号：换列表时自增，触发表格重挂载以重放淡入动画
 
 // 拉取浏览记录（带关键词）
 async function loadHistory() {
@@ -40,6 +41,7 @@ async function loadHistory() {
     if (seq !== requestSeq) return // 已有更新的请求，丢弃本次过期结果
     list.value = data.list
     total.value = data.total
+    listVersion.value++ // 换列表时自增，触发表格重挂载以重放淡入动画
   } catch (err) {
     if (seq !== requestSeq) return
     // request.js 不自动弹错误提示，页面要自己 catch 并提示
@@ -124,6 +126,7 @@ onMounted(() => {
       </div>
 
       <el-table
+        :key="listVersion"
         v-loading="loading"
         :data="list"
         :empty-text="keyword ? '好像没有这样的浏览记录呢...' : '暂无浏览记录'"
@@ -161,6 +164,15 @@ onMounted(() => {
 <style scoped>
 :deep(.el-table__row) {
   cursor: pointer;
+  animation: row-fade-in 0.3s ease;
+}
+@keyframes row-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .records__topbar {
   margin-bottom: var(--space-md);

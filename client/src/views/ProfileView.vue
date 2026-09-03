@@ -22,6 +22,7 @@ const loading = ref(false)
 const keyword = ref('') // 搜索关键词（标题/正文/作者）
 let searchTimer = null // 防抖定时器
 let requestSeq = 0 // 请求序号：用于丢弃过期的旧请求结果
+const listVersion = ref(0) // 列表版本号：换列表时自增，触发所有卡片重新挂载以重放淡入动画
 
 // 个人信息编辑弹窗
 const editVisible = ref(false)
@@ -57,6 +58,7 @@ async function loadList() {
     if (seq !== requestSeq) return // 已有更新的请求，丢弃本次过期结果
     list.value = data.list
     total.value = data.total
+    listVersion.value++ // 换列表时自增，触发所有卡片重新挂载以重放淡入动画
   } catch (err) {
     if (seq !== requestSeq) return
     ElMessage.error(err.message || '加载失败')
@@ -241,7 +243,7 @@ onMounted(() => {
         v-if="!loading && list.length === 0"
         :description="keyword ? '没有匹配的内容' : '暂无内容'"
       />
-      <div v-for="row in list" :key="row.id" class="profile-post-card" @click="goPost(row)">
+      <div v-for="row in list" :key="`${listVersion}-${row.id}`" class="profile-post-card" @click="goPost(row)">
         <div class="profile-post-card__head">
           <h3 class="profile-post-card__title">{{ row.title }}</h3>
           <span class="profile-post-card__category">{{ row.categoryName || '未分类' }}</span>
@@ -407,6 +409,17 @@ onMounted(() => {
   padding: var(--space-md) 0;
   border-bottom: 1px solid var(--border-color-light);
   cursor: pointer;
+  animation: card-fade-in 0.3s ease;
+}
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .profile-post-card:last-child {
   border-bottom: none;
