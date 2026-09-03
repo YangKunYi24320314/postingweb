@@ -2,6 +2,8 @@
 // 三个接口结构几乎一样：都是"关联表/主表 JOIN 帖子 + 作者 + 分页"，
 // 所以共用同一个字段翻译函数 toPostItem。
 const express = require('express')
+const multer = require('multer')
+const path = require('path')
 const pool = require('../db')
 const { ok, fail, CODE } = require('../utils/response')
 const { auth } = require('../middleware/auth')
@@ -116,6 +118,27 @@ router.get('/me/likes', auth, async (req, res) => {
   )
 
   return ok(res, { list: list.rows.map(toPostItem), total, page, pageSize })
+})
+
+// ---------- 头像上传（个人中心用） ----------
+// 头像存到 server/static，由 server.js 的 /static 静态托管访问
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '../static')),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.png'
+    cb(null, `avatar-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`)
+  },
+})
+const avatarUpload = multer({ storage: avatarStorage, limits: { fileSize: 5 * 1024 * 1024 } })
+
+// POST /api/me/avatar —— 上传头像（需登录），返回 { url }
+router.post('/me/avatar', auth, avatarUpload.single('file'), (req, res) => {
+  if (!req.file) {
+    return fail(res, CODE.PARAM_ERROR, '未接收到图片')
+  }
+  // 拼绝对地址，前端 <img> 直接访问（无需经过 vite 代理）
+  const url = `${req.protocol}://${req.get('host')}/static/${req.file.filename}`
+  return ok(res, { url })
 })
 
 module.exports = router

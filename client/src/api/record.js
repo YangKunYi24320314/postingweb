@@ -31,3 +31,8 @@ export function getMyFavorites(params) {
 export function getMyLikes(params) {
   return request.get('/me/likes', { params })
 }
+
+// 上传头像（FormData，返回 { url }）
+export function uploadAvatar(formData) {
+  return request.post('/me/avatar', formData)
+}
