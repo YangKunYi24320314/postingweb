@@ -1,6 +1,6 @@
 import request from './request'
 
-// 获取全部帖子
+// 帖子列表（支持分页、分类/标签/关键词筛选、rank 组合排序）
 export function getPostList(params) {
   return request({
     url: '/posts',

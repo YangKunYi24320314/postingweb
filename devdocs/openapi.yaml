@@ -195,6 +195,12 @@ paths:
         - { name: tag, in: query, schema: { type: string, example: 考研 } }
         - { name: keyword, in: query, schema: { type: string, example: 自习室 } }
         - { name: sort, in: query, schema: { type: string, enum: [new, hot], default: new } }
+        - {
+            name: rank,
+            in: query,
+            description: 组合排序，逗号分隔；latest=最新，hot=热门，recommend=猜你喜欢。包含 recommend 时必须登录。
+            schema: { type: string, example: "latest,hot,recommend" },
+          }
       responses:
         '200':
           description: 成功
