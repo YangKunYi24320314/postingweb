@@ -194,6 +194,12 @@ paths:
         - { name: tag, in: query, schema: { type: string, example: 考研 } }
         - { name: keyword, in: query, schema: { type: string, example: 自习室 } }
         - { name: sort, in: query, schema: { type: string, enum: [new, hot], default: new } }
+        - {
+            name: rank,
+            in: query,
+            description: 组合排序，逗号分隔；latest=最新，hot=热门，recommend=猜你喜欢。包含 recommend 时必须登录。
+            schema: { type: string, example: "latest,hot,recommend" },
+          }
       responses:
         '200':
           description: 成功
@@ -587,26 +593,6 @@ paths:
     get:
       tags: [记录中心]
       summary: 我点赞的帖子
-      parameters:
-        - { name: page, in: query, schema: { type: integer, default: 1 } }
-        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
-      responses:
-        '200':
-          description: 成功
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data: { $ref: '#/components/schemas/PageResult' }
-
-  # ======================= 推荐（二期可选） =======================
-  /recommend/posts:
-    get:
-      tags: [推荐]
-      summary: 个性化推荐帖子
       parameters:
         - { name: page, in: query, schema: { type: integer, default: 1 } }
         - { name: pageSize, in: query, schema: { type: integer, default: 10 } }

@@ -2,7 +2,7 @@
 // 使用方式示例：const data = await getPostList({ page: 1, pageSize: 10 })
 import request from './request'
 
-// 帖子列表（支持分页、分类/标签/关键词筛选、排序）
+// 帖子列表（支持分页、分类/标签/关键词筛选、rank 组合排序）
 export function getPostList(params) {
   return request.get('/posts', { params })
 }

@@ -21,6 +21,72 @@ function isPositiveId(value) {
   return Number.isInteger(value) && value > 0
 }
 
+function parseRank(query) {
+  const raw = query.rank || query.sort || 'latest'
+  const values = Array.isArray(raw) ? raw : String(raw).split(',')
+  const rank = [...new Set(values.map((item) => String(item).trim()).filter(Boolean))]
+    .map((item) => (item === 'new' ? 'latest' : item))
+
+  const allowed = new Set(['latest', 'hot', 'recommend'])
+  if (rank.some((item) => !allowed.has(item))) {
+    return { error: true }
+  }
+
+  return { rank: rank.length ? rank : ['latest'] }
+}
+
+function buildPostFilters(query, startIndex = 1) {
+  const { categoryId, tag, keyword } = query
+  const conditions = ['p.is_deleted = false', 'p.status = 1']
+  const params = []
+
+  if (categoryId !== undefined && categoryId !== '') {
+    const cat = Number(categoryId)
+    if (!isPositiveId(cat)) {
+      return { error: '分类 id 不合法' }
+    }
+    params.push(cat)
+    conditions.push(`p.category_id = $${startIndex + params.length - 1}`)
+  }
+
+  if (tag !== undefined && tag !== '') {
+    params.push(String(tag).trim())
+    conditions.push(
+      `EXISTS(SELECT 1 FROM post_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id = p.id AND t.name = $${startIndex + params.length - 1})`
+    )
+  }
+
+  if (keyword !== undefined && keyword !== '') {
+    params.push(`%${String(keyword).trim()}%`)
+    conditions.push(
+      `(p.title ILIKE $${startIndex + params.length - 1} OR p.content ILIKE $${startIndex + params.length - 1})`
+    )
+  }
+
+  return { where: conditions.join(' AND '), params }
+}
+
+function buildRankOrder(rank) {
+  const scores = []
+  const hotScore = '(p.view_count * 1 + p.like_count * 3 + p.favorite_count * 4 + p.comment_count * 5)'
+
+  if (rank.includes('latest')) {
+    scores.push('(100 / (EXTRACT(EPOCH FROM (now() - p.created_at)) / 3600 + 2)) * 2')
+  }
+
+  if (rank.includes('hot')) {
+    scores.push(hotScore)
+  }
+
+  if (rank.includes('recommend')) {
+    scores.push(
+      `(CASE WHEN ps.preference_count > 0 THEN COALESCE(pref.recommend_score, 0) * 3 ELSE ${hotScore} * 0.5 END)`
+    )
+  }
+
+  return `${scores.join(' + ')} DESC, p.created_at DESC, p.id DESC`
+}
+
 // ---------- 帖子 → 前端结构的翻译函数 ----------
 
 // 单帖子的字段翻译（列表项不需要 content，详情需要）
@@ -114,60 +180,83 @@ async function findPost(postId, userId, isDetail) {
 // GET /api/posts —— 帖子列表（公开，可筛选/搜索/排序/分页）
 router.get('/posts', optionalAuth, async (req, res) => {
   const { page, pageSize, offset } = parsePage(req.query)
-  const { categoryId, tag, keyword, sort } = req.query
   const userId = req.userId || 0
+  const { rank, error: rankError } = parseRank(req.query)
 
-  const conditions = ['p.is_deleted = false', 'p.status = 1']
-  const params = []
-
-  if (categoryId !== undefined && categoryId !== '') {
-    const cat = Number(categoryId)
-    if (!isPositiveId(cat)) {
-      return fail(res, CODE.PARAM_ERROR, '分类 id 不合法')
-    }
-    params.push(cat)
-    conditions.push(`p.category_id = $${params.length}`)
+  if (rankError) {
+    return fail(res, CODE.PARAM_ERROR, '排序参数不合法')
   }
 
-  if (tag !== undefined && tag !== '') {
-    params.push(String(tag))
-    conditions.push(
-      `EXISTS(SELECT 1 FROM post_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id = p.id AND t.name = $${params.length})`
-    )
+  if (rank.includes('recommend') && !userId) {
+    return fail(res, CODE.UNAUTHORIZED, '请先登录后查看猜你喜欢', 401)
   }
 
-  if (keyword !== undefined && keyword !== '') {
-    params.push(`%${String(keyword).trim()}%`)
-    conditions.push(`(p.title ILIKE $${params.length} OR p.content ILIKE $${params.length})`)
+  const countFilter = buildPostFilters(req.query)
+  if (countFilter.error) {
+    return fail(res, CODE.PARAM_ERROR, countFilter.error)
   }
-
-  const where = conditions.join(' AND ')
-
-  // 排序：new 按发布时间倒序；hot 按热度（点赞/评论/收藏）倒序
-  const orderBy =
-    sort === 'hot'
-      ? 'p.like_count DESC, p.comment_count DESC, p.favorite_count DESC, p.created_at DESC'
-      : 'p.created_at DESC, p.id DESC'
 
   const countResult = await pool.query(
-    `SELECT COUNT(*)::int AS total FROM posts p WHERE ${where}`,
-    params
+    `SELECT COUNT(*)::int AS total FROM posts p WHERE ${countFilter.where}`,
+    countFilter.params
   )
   const total = countResult.rows[0].total
 
-  // 注意：这里 userId 要作为最后一个参数传给 EXISTS 子查询
+  const listFilter = buildPostFilters(req.query, 2)
+  const orderBy = buildRankOrder(rank)
+  const preferenceSql = rank.includes('recommend')
+    ? `
+      WITH user_preferences AS (
+        SELECT behavior_tags.tag_id, SUM(behavior_tags.weight)::int AS weight
+        FROM (
+          SELECT pt.tag_id, 1 AS weight
+          FROM histories h
+          JOIN post_tags pt ON pt.post_id = h.post_id
+          WHERE h.user_id = $1
+          UNION ALL
+          SELECT pt.tag_id, 3 AS weight
+          FROM post_likes pl
+          JOIN post_tags pt ON pt.post_id = pl.post_id
+          WHERE pl.user_id = $1
+          UNION ALL
+          SELECT pt.tag_id, 4 AS weight
+          FROM favorites f
+          JOIN post_tags pt ON pt.post_id = f.post_id
+          WHERE f.user_id = $1
+        ) behavior_tags
+        GROUP BY behavior_tags.tag_id
+      ),
+      preference_summary AS (
+        SELECT COUNT(*)::int AS preference_count FROM user_preferences
+      )
+    `
+    : ''
+  const preferenceJoin = rank.includes('recommend')
+    ? `
+      CROSS JOIN preference_summary ps
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(SUM(up.weight), 0)::int AS recommend_score
+        FROM post_tags pt
+        JOIN user_preferences up ON up.tag_id = pt.tag_id
+        WHERE pt.post_id = p.id
+      ) pref ON true
+    `
+    : 'LEFT JOIN LATERAL (SELECT 0::int AS recommend_score) pref ON true'
+
   const listResult = await pool.query(
-    `SELECT p.id::int, p.user_id::int, p.title, p.category_id::int,
+    `${preferenceSql}
+     SELECT p.id::int, p.user_id::int, p.title, p.category_id::int,
             p.view_count, p.like_count, p.favorite_count, p.comment_count, p.is_pinned, p.created_at,
             u.id::int AS user_id, u.nickname, u.avatar_url AS user_avatar_url,
             EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $1) AS is_liked,
             EXISTS(SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $1) AS is_favorite
      FROM posts p
      JOIN users u ON u.id = p.user_id
-     WHERE ${where}
+     ${preferenceJoin}
+     WHERE ${listFilter.where}
      ORDER BY ${orderBy}
-     LIMIT $${params.length + 2} OFFSET $${params.length + 3}`,
-    [userId, ...params, pageSize, offset]
+     LIMIT $${listFilter.params.length + 2} OFFSET $${listFilter.params.length + 3}`,
+    [userId, ...listFilter.params, pageSize, offset]
   )
 
   const tagsMap = await getTagsByPostIds(listResult.rows.map((r) => r.id))
