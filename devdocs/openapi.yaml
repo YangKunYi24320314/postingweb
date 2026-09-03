@@ -526,6 +526,7 @@ paths:
       parameters:
         - { name: page, in: query, schema: { type: integer, default: 1 } }
         - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+        - { name: keyword, in: query, schema: { type: string }, description: 对标题/正文/作者昵称做模糊匹配 }
       responses:
         '200':
           description: 成功

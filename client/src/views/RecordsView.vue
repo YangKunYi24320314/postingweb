@@ -1,8 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, Search } from '@element-plus/icons-vue'
 import { getHistory, clearHistory } from '../api/record'
 
 const router = useRouter()
@@ -22,22 +22,44 @@ const total = ref(0) // 总条数（分页用）
 const page = ref(1) // 当前页码
 const pageSize = ref(10) // 每页条数
 const loading = ref(false) // 是否加载中
+const keyword = ref('') // 搜索关键词（标题/正文/作者）
+let searchTimer = null // 防抖定时器
+let requestSeq = 0 // 请求序号：用于丢弃过期的旧请求结果
 
-// 拉取浏览记录
+// 拉取浏览记录（带关键词）
 async function loadHistory() {
+  const seq = ++requestSeq
   loading.value = true
   try {
     // 组长的 request.js 已经解包过，这里直接拿到 { list, total, page, pageSize }
-    const data = await getHistory({ page: page.value, pageSize: pageSize.value })
+    const data = await getHistory({
+      page: page.value,
+      pageSize: pageSize.value,
+      keyword: keyword.value || undefined,
+    })
+    if (seq !== requestSeq) return // 已有更新的请求，丢弃本次过期结果
     list.value = data.list
     total.value = data.total
   } catch (err) {
+    if (seq !== requestSeq) return
     // request.js 不自动弹错误提示，页面要自己 catch 并提示
     ElMessage.error(err.message || '加载失败')
   } finally {
-    loading.value = false
+    if (seq === requestSeq) {
+      loading.value = false
+    }
   }
 }
+
+// 监听关键词变化：防抖 300ms 后回到第一页并重新加载
+// 用 watch 直接监听 keyword（由 v-model 驱动），比 el-input 的 @input 事件更可靠
+watch(keyword, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    loadHistory()
+  }, 300)
+})
 
 function goPost(row) {
   router.push(`/post/${row.id}`)
@@ -84,7 +106,16 @@ onMounted(() => {
 
     <el-card shadow="never">
       <div class="records__header">
-        <h2 class="records__title">我的浏览记录</h2>
+        <div class="records__header-left">
+          <h2 class="records__title">我的浏览记录</h2>
+          <el-input
+            v-model="keyword"
+            class="records__search"
+            placeholder="搜索标题、正文或作者"
+            clearable
+            :prefix-icon="Search"
+          />
+        </div>
         <el-popconfirm title="确定清空所有浏览记录吗？" @confirm="handleClear">
           <template #reference>
             <el-button type="danger" plain :disabled="total === 0">清空浏览记录</el-button>
@@ -92,7 +123,12 @@ onMounted(() => {
         </el-popconfirm>
       </div>
 
-      <el-table v-loading="loading" :data="list" empty-text="暂无浏览记录" @row-click="goPost">
+      <el-table
+        v-loading="loading"
+        :data="list"
+        :empty-text="keyword ? '好像没有这样的浏览记录呢...' : '暂无浏览记录'"
+        @row-click="goPost"
+      >
         <el-table-column prop="title" label="帖子标题" min-width="200" />
         <el-table-column label="作者" width="140">
           <template #default="{ row }">
@@ -134,10 +170,20 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-md);
+  gap: var(--space-md);
+}
+.records__header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
 }
 .records__title {
   font-size: 18px;
   color: var(--text-primary);
+}
+.records__search {
+  width: 240px;
 }
 .records__pagination {
   margin-top: var(--space-md);
