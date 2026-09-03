@@ -235,6 +235,26 @@
 
 > `totalLikes` = 我所有帖子的 `like_count` 之和；`totalFavorites` = 我所有帖子的 `favorite_count` 之和（只统计未删除的帖子）。
 
+### 7.5 背景图
+- `POST /me/background`（需登录）— 上传并保存个人信息背景图
+- `GET /me/background`（需登录）— 获取我的背景图
+
+**上传请求**：`multipart/form-data`，字段名固定为 `file`（单张图片，最大 5MB）。
+
+**上传响应 data**：
+
+```json
+{ "url": "http://host/static/backgrounds/bg-xxx.png" }
+```
+
+**获取响应 data**：
+
+```json
+{ "backgroundUrl": "http://host/static/backgrounds/bg-xxx.png" }
+```
+
+> 背景图文件存到后端 `server/static/backgrounds/`；`POST` 会把 `url` 直接写进 `users.background_url`。未设置自定义背景时，`GET` 返回默认背景 `/static/default-background.jpg`。
+
 ---
 
 ## 八、附件 Attachments（帖子附件）

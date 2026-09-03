@@ -225,4 +225,34 @@ router.post('/me/avatar', auth, avatarUpload.single('file'), (req, res) => {
   return ok(res, { url })
 })
 
+// ---------- 背景图上传（个人中心用） ----------
+// 背景图存到 server/static/backgrounds，由 server.js 的 /static 静态托管访问
+const bgStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '../static/backgrounds')),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.png'
+    cb(null, `bg-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`)
+  },
+})
+const bgUpload = multer({ storage: bgStorage, limits: { fileSize: 5 * 1024 * 1024 } })
+
+// POST /api/me/background —— 上传并保存背景图（需登录），返回 { url }
+router.post('/me/background', auth, bgUpload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return fail(res, CODE.PARAM_ERROR, '未接收到图片')
+  }
+  const url = `${req.protocol}://${req.get('host')}/static/backgrounds/${req.file.filename}`
+  await pool.query('UPDATE users SET background_url = $1 WHERE id = $2', [url, req.userId])
+  return ok(res, { url })
+})
+
+// GET /api/me/background —— 获取我的背景图（需登录），返回 { backgroundUrl }
+// 未设置自定义背景时，回退到默认背景图
+router.get('/me/background', auth, async (req, res) => {
+  const result = await pool.query('SELECT background_url FROM users WHERE id = $1', [req.userId])
+  const customUrl = result.rows[0] ? result.rows[0].background_url : null
+  const defaultUrl = `${req.protocol}://${req.get('host')}/static/default-background.jpg`
+  return ok(res, { backgroundUrl: customUrl || defaultUrl })
+})
+
 module.exports = router

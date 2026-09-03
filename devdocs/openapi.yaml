@@ -663,6 +663,53 @@ paths:
                           totalLikes: { type: integer, example: 12 }
                           totalFavorites: { type: integer, example: 5 }
 
+  /me/background:
+    post:
+      tags: [记录中心]
+      summary: 上传并保存个人信息背景图（multipart/form-data，字段 file，最大5MB）
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          url: { type: string, example: "http://host/static/backgrounds/bg-xxx.png" }
+    get:
+      tags: [记录中心]
+      summary: 获取我的背景图
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          backgroundUrl: { type: string, nullable: true, example: "http://host/static/backgrounds/bg-xxx.png" }
+
   # ======================= 附件 =======================
   /attachments/upload:
     post:

@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { MoreFilled, Edit, View, ChatDotRound, Pointer, Search } from '@element-plus/icons-vue'
 import { getMe, updateProfile } from '../api/auth'
-import { getMyPosts, getMyFavorites, getMyLikes, uploadAvatar, getMeStats } from '../api/record'
+import { getMyPosts, getMyFavorites, getMyLikes, uploadAvatar, getMeStats, uploadBackground, getMeBackground } from '../api/record'
 import RecentHistoryPreview from '../components/RecentHistoryPreview.vue'
 import AvatarCropper from '../components/AvatarCropper.vue'
 
@@ -40,6 +40,13 @@ const avatarPreviewVisible = ref(false)
 // 头像裁剪弹窗
 const cropVisible = ref(false) // 裁剪弹窗是否显示
 const cropImageSrc = ref('') // 待裁剪的原图（data URL）
+
+// 背景图
+const backgroundUrl = ref('') // 当前背景图 URL
+const bgCropVisible = ref(false) // 背景裁剪弹窗
+const bgCropImageSrc = ref('') // 待裁剪的背景原图
+const bgFileInput = ref(null) // 背景文件选择器
+const uploadingBg = ref(false) // 背景上传中
 
 // 页签名 → 对应的接口函数
 const fetchers = {
@@ -131,6 +138,16 @@ async function loadStats() {
   }
 }
 
+// 加载背景图
+async function loadBackground() {
+  try {
+    const data = await getMeBackground()
+    backgroundUrl.value = data.backgroundUrl || ''
+  } catch {
+    backgroundUrl.value = ''
+  }
+}
+
 // 打开编辑弹窗：回显当前信息
 function openEdit() {
   editForm.nickname = user.value?.nickname || ''
@@ -142,6 +159,7 @@ function openEdit() {
 // "···" 下拉菜单项点击
 function handleCommand(command) {
   if (command === 'editProfile') openEdit()
+  if (command === 'changeBackground') triggerBgUpload()
 }
 
 // 保存个人信息
@@ -203,6 +221,46 @@ async function handleCropped(blob) {
   }
 }
 
+// 点击"更改个人信息背景" → 唤起背景文件选择
+function triggerBgUpload() {
+  bgFileInput.value?.click()
+}
+
+// 背景文件选择后：读成 data URL 打开裁剪弹窗
+function handleBgFileChange(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    ElMessage.error('请选择图片文件')
+    e.target.value = ''
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = () => {
+    bgCropImageSrc.value = reader.result
+    bgCropVisible.value = true
+  }
+  reader.readAsDataURL(file)
+  e.target.value = ''
+}
+
+// 背景裁剪确定后：上传并保存
+async function handleBgCropped(blob) {
+  uploadingBg.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', blob, 'background.jpg')
+    const data = await uploadBackground(formData)
+    backgroundUrl.value = data.url
+    bgCropVisible.value = false
+    ElMessage.success('背景更新成功')
+  } catch (err) {
+    ElMessage.error(err.message || '背景更新失败')
+  } finally {
+    uploadingBg.value = false
+  }
+}
+
 // 点击头像 → 查看全图（仅当已设置头像）
 function openAvatarPreview() {
   if (!user.value?.avatarUrl) return
@@ -216,19 +274,25 @@ onMounted(() => {
   loadList()
   loadMe()
   loadStats()
+  loadBackground()
 })
 </script>
 
 <template>
   <div class="page-container">
     <!-- 个人信息区 -->
-    <el-card shadow="never" class="profile__info">
+    <el-card
+      shadow="never"
+      class="profile__info"
+      :style="backgroundUrl ? { '--profile-bg': `url('${backgroundUrl}')` } : {}"
+    >
       <div class="info__actions">
         <el-dropdown trigger="click" @command="handleCommand">
           <el-button :icon="MoreFilled" circle text class="info__more-btn" />
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="editProfile">修改个人信息</el-dropdown-item>
+              <el-dropdown-item command="changeBackground">更改个人信息背景</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -383,6 +447,24 @@ onMounted(() => {
       :loading="uploadingAvatar"
       @confirm="handleCropped"
     />
+
+    <!-- 背景文件选择器 + 背景裁剪弹窗 -->
+    <input
+      ref="bgFileInput"
+      type="file"
+      accept="image/*"
+      class="avatar-editor__input"
+      @change="handleBgFileChange"
+    />
+    <AvatarCropper
+      v-model="bgCropVisible"
+      :image-src="bgCropImageSrc"
+      :loading="uploadingBg"
+      :aspect-ratio="4"
+      :max-output-size="2560"
+      title="裁剪背景图"
+      @confirm="handleBgCropped"
+    />
   </div>
 </template>
 
@@ -401,7 +483,10 @@ onMounted(() => {
   left: 0;
   right: 0;
   height: 66.66%;
-  background: url('/profile-bg.png') center / cover no-repeat;
+  background-image: var(--profile-bg, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   opacity: 0.6;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);

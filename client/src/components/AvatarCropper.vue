@@ -3,11 +3,14 @@ import { ref } from 'vue'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 
-// 头像裁剪弹窗：传入图片 src，展示 1:1 裁剪框，支持缩放，确定后把裁剪结果（Blob）emit 出去
-defineProps({
+// 图片裁剪弹窗：传入图片 src，按 aspectRatio 比例裁剪，支持缩放，确定后把裁剪结果（Blob）emit 出去
+const props = defineProps({
   modelValue: { type: Boolean, default: false },
   imageSrc: { type: String, default: '' },
   loading: { type: Boolean, default: false },
+  aspectRatio: { type: Number, default: 1 }, // 裁剪框宽高比（宽/高），默认 1:1
+  title: { type: String, default: '裁剪图片' },
+  maxOutputSize: { type: Number, default: 800 }, // 输出最长边上限（像素），按原图自然分辨率输出、不强制小尺寸
 })
 const emit = defineEmits(['update:modelValue', 'confirm'])
 
@@ -27,7 +30,7 @@ function createCropper() {
   if (!imgRef.value) return
   destroyCropper() // 防止重复初始化
   cropper = new Cropper(imgRef.value, {
-    aspectRatio: 1, // 1:1 裁剪框
+    aspectRatio: props.aspectRatio, // 裁剪框宽高比
     viewMode: 1, // 裁剪框不超出画布
     autoCropArea: 1, // 初始裁剪框铺满
     zoomable: true,
@@ -65,7 +68,12 @@ function onZoomChange(val) {
 
 function handleConfirm() {
   if (!cropper) return
-  const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 })
+  const canvas = cropper.getCroppedCanvas({
+    maxWidth: props.maxOutputSize,
+    maxHeight: props.maxOutputSize,
+    imageSmoothingEnabled: true,
+    imageSmoothingQuality: 'high',
+  })
   canvas.toBlob(
     (blob) => {
       if (blob) emit('confirm', blob)
@@ -79,7 +87,7 @@ function handleConfirm() {
 <template>
   <el-dialog
     :model-value="modelValue"
-    title="裁剪头像"
+    :title="title"
     width="420px"
     :close-on-click-modal="false"
     @update:model-value="onDialogVisibleChange"

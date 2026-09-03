@@ -150,3 +150,6 @@ server/static/attachments/*
 # 头像上传目录（本地文件不入库，用 .gitkeep 保留目录）
 server/static/avatars/*
 !server/static/avatars/.gitkeep
+# 背景图上传目录（本地文件不入库，用 .gitkeep 保留目录）
+server/static/backgrounds/*
+!server/static/backgrounds/.gitkeep
