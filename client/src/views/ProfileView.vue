@@ -243,7 +243,13 @@ onMounted(() => {
         v-if="!loading && list.length === 0"
         :description="keyword ? '没有匹配的内容' : '暂无内容'"
       />
-      <div v-for="row in list" :key="`${listVersion}-${row.id}`" class="profile-post-card" @click="goPost(row)">
+      <div
+        v-for="(row, index) in list"
+        :key="`${listVersion}-${row.id}`"
+        class="profile-post-card"
+        :style="{ animationDelay: `${index * 80}ms` }"
+        @click="goPost(row)"
+      >
         <div class="profile-post-card__head">
           <h3 class="profile-post-card__title">{{ row.title }}</h3>
           <span class="profile-post-card__category">{{ row.categoryName || '未分类' }}</span>
@@ -409,7 +415,7 @@ onMounted(() => {
   padding: var(--space-md) 0;
   border-bottom: 1px solid var(--border-color-light);
   cursor: pointer;
-  animation: card-fade-in 0.3s ease;
+  animation: card-fade-in 0.3s ease backwards;
 }
 @keyframes card-fade-in {
   from {
