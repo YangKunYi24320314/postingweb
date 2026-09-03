@@ -104,8 +104,14 @@ async function handleResetPassword() {
       <h2 class="login__title">{{ pageTitle }}</h2>
       <el-form :model="form" @submit.prevent="handleSubmit">
         <el-form-item>
-          <el-input v-model="form.identifier" placeholder="用户名 / 手机号 / 邮箱" size="large" autocomplete="username" />
+          <el-input
+            v-model="form.identifier"
+            :placeholder="isRegister ? '用户名 / 学号' : '用户名 / 手机号 / 邮箱'"
+            size="large"
+            autocomplete="username"
+          />
         </el-form-item>
+        <p v-if="isRegister" class="login__register-hint">手机号和邮箱请绑定后登录，不能直接注册</p>
         <el-form-item>
           <el-input v-model="form.password" type="password" placeholder="密码" show-password size="large" autocomplete="current-password" />
         </el-form-item>
@@ -182,6 +188,13 @@ async function handleResetPassword() {
   display: flex;
   justify-content: center;
   gap: var(--space-md);
+}
+
+.login__register-hint {
+  margin: calc(-1 * var(--space-sm)) 0 var(--space-md);
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: center;
 }
 
 .login__code-row {

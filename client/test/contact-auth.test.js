@@ -18,6 +18,7 @@ test('login view submits identifier and supports password reset entry', () => {
   assert.match(loginView, /identifier/)
   assert.match(loginView, /用户名 \/ 手机号 \/ 邮箱/)
   assert.match(loginView, /找回密码/)
+  assert.match(loginView, /手机号和邮箱请绑定后登录/)
 })
 
 test('profile view exposes contact binding and password change controls', () => {

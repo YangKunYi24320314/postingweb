@@ -3,6 +3,11 @@ const assert = require('node:assert/strict')
 
 const { validateCredentials } = require('../utils/auth-validation')
 
+test('registration rejects a phone number or email as a new username', () => {
+  assert.throws(() => validateCredentials('13800138000', '123456'), /手机号或邮箱请绑定后登录/)
+  assert.throws(() => validateCredentials('user@example.com', '123456'), /手机号或邮箱请绑定后登录/)
+})
+
 test('credentials accept a trimmed username and six-character password', () => {
   assert.deepEqual(validateCredentials('  scu123  ', '123456'), {
     username: 'scu123',
