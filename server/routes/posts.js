@@ -117,12 +117,14 @@ async function findPost(postId, userId, isDetail) {
   if (!row) return null
   const tags = await getTagsByPostIds([postId])
   row.tags = tags[postId] || []
-  // === 新增：查询该帖子的所有附件 ===
+
+  // === 修正：查询附件补充 file_path 字段，和数据库表对齐 ===
   const attachResult = await pool.query(
-    'SELECT id, original_filename, file_size, mime_type FROM post_attachments WHERE post_id = $1 ORDER BY id',
+    'SELECT id, original_filename, file_path, file_size, mime_type FROM post_attachments WHERE post_id = $1 ORDER BY id',
     [postId]
   )
   row.attachments = attachResult.rows
+
   return toPost(row, isDetail)
 }
 
@@ -204,7 +206,6 @@ router.get('/posts', optionalAuth, async (req, res) => {
 
   return ok(res, { list, total, page, pageSize })
 })
-
 
 // GET /api/posts/:id —— 帖子详情（公开，需登录场景下带 isLiked/isFavorite）
 router.get('/posts/:id', optionalAuth, async (req, res) => {
