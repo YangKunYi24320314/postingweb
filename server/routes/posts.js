@@ -5,11 +5,9 @@ const express = require('express')
 const pool = require('../db')
 const { ok, fail, CODE } = require('../utils/response')
 const { auth, optionalAuth } = require('../middleware/auth')
-
 const router = express.Router()
 
 // ---------- 基础工具 ----------
-
 // 从 query 安全解析分页参数，防止传 "abc" 这类非法值导致 SQL 报错。
 function parsePage(query) {
   const page = Math.max(1, parseInt(query.page, 10) || 1)
@@ -22,13 +20,13 @@ function isPositiveId(value) {
 }
 
 // ---------- 帖子 → 前端结构的翻译函数 ----------
-
 // 单帖子的字段翻译（列表项不需要 content，详情需要）
 function toPost(row, isDetail = false) {
   const post = {
     id: row.id,
     title: row.title,
     categoryId: row.category_id,
+    categoryName: row.category_name || null,
     user: { id: row.user_id, nickname: row.nickname, avatarUrl: row.user_avatar_url || null },
     viewCount: row.view_count,
     likeCount: row.like_count,
@@ -38,6 +36,8 @@ function toPost(row, isDetail = false) {
     isLiked: row.is_liked,
     isFavorite: row.is_favorite,
     createdAt: row.created_at,
+    // === 新增：附件列表 ===
+    attachments: row.attachments || []
   }
   if (isDetail) {
     post.content = row.content
@@ -89,14 +89,25 @@ async function bindTags(client, postId, tagNames) {
   }
 }
 
+// === 新增：事务内绑定附件到帖子 ===
+async function bindAttachments(client, postId, attachmentIds) {
+  if (!Array.isArray(attachmentIds) || !attachmentIds.length) return
+  for (const attachId of attachmentIds) {
+    await client.query(
+      'UPDATE post_attachments SET post_id = $1 WHERE id = $2 AND post_id IS NULL',
+      [postId, attachId]
+    )
+  }
+}
+
 // 查单帖（带作者、是否被我点赞/收藏），isDetail 控制是否要 content
 async function findPost(postId, userId, isDetail) {
   const result = await pool.query(
     `SELECT p.id::int, p.user_id::int, p.title, p.content, p.category_id::int,
-            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.is_pinned, p.created_at,
-            u.id::int AS user_id, u.nickname AS user_nickname, u.avatar_url AS user_avatar_url,
-            EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS is_liked,
-            EXISTS(SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $2) AS is_favorite
+         p.view_count, p.like_count, p.favorite_count, p.comment_count, p.is_pinned, p.created_at,
+         u.id::int AS user_id, u.nickname AS user_nickname, u.avatar_url AS user_avatar_url,
+         EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS is_liked,
+         EXISTS(SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $2) AS is_favorite
      FROM posts p
      JOIN users u ON u.id = p.user_id
      WHERE p.id = $1 AND p.is_deleted = false`,
@@ -106,16 +117,22 @@ async function findPost(postId, userId, isDetail) {
   if (!row) return null
   const tags = await getTagsByPostIds([postId])
   row.tags = tags[postId] || []
+  // === 新增：查询该帖子的所有附件 ===
+  const attachResult = await pool.query(
+    'SELECT id, original_filename, file_size, mime_type FROM post_attachments WHERE post_id = $1 ORDER BY id',
+    [postId]
+  )
+  row.attachments = attachResult.rows
   return toPost(row, isDetail)
 }
 
 // ---------- 接口 ----------
-
 // GET /api/posts —— 帖子列表（公开，可筛选/搜索/排序/分页）
 router.get('/posts', optionalAuth, async (req, res) => {
   const { page, pageSize, offset } = parsePage(req.query)
   const { categoryId, tag, keyword, sort } = req.query
-  const userId = req.userId || 0
+  // 强制转整数，避免字符串类型导致 PostgreSQL 无法推断
+  const userId = parseInt(req.userId, 10) || 0
 
   const conditions = ['p.is_deleted = false', 'p.status = 1']
   const params = []
@@ -126,6 +143,7 @@ router.get('/posts', optionalAuth, async (req, res) => {
       return fail(res, CODE.PARAM_ERROR, '分类 id 不合法')
     }
     params.push(cat)
+    // WHERE 条件占位符统一从 $1 开始，和 count 查询对齐
     conditions.push(`p.category_id = $${params.length}`)
   }
 
@@ -149,25 +167,33 @@ router.get('/posts', optionalAuth, async (req, res) => {
       ? 'p.like_count DESC, p.comment_count DESC, p.favorite_count DESC, p.created_at DESC'
       : 'p.created_at DESC, p.id DESC'
 
+  // 总数查询（参数和 WHERE 占位符一一对应，从 $1 开始）
   const countResult = await pool.query(
     `SELECT COUNT(*)::int AS total FROM posts p WHERE ${where}`,
     params
   )
   const total = countResult.rows[0].total
 
-  // 注意：这里 userId 要作为最后一个参数传给 EXISTS 子查询
+  // 计算 userId、分页参数的占位符序号
+  const userIdIndex = params.length + 1
+  const limitIndex = params.length + 2
+  const offsetIndex = params.length + 3
+
+  // 列表查询：条件参数在前，userId 在后，避免 WHERE 占位符错位
   const listResult = await pool.query(
     `SELECT p.id::int, p.user_id::int, p.title, p.category_id::int,
-            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.is_pinned, p.created_at,
-            u.id::int AS user_id, u.nickname, u.avatar_url AS user_avatar_url,
-            EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $1) AS is_liked,
-            EXISTS(SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $1) AS is_favorite
+         p.view_count, p.like_count, p.favorite_count, p.comment_count, p.is_pinned, p.created_at,
+         u.id::int AS user_id, u.nickname, u.avatar_url AS user_avatar_url,
+         c.name AS category_name,
+         EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdIndex}::int) AS is_liked,
+         EXISTS(SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $${userIdIndex}::int) AS is_favorite
      FROM posts p
      JOIN users u ON u.id = p.user_id
+     LEFT JOIN categories c ON p.category_id = c.id
      WHERE ${where}
      ORDER BY ${orderBy}
-     LIMIT $${params.length + 2} OFFSET $${params.length + 3}`,
-    [userId, ...params, pageSize, offset]
+     LIMIT $${limitIndex} OFFSET $${offsetIndex}`,
+    [...params, userId, pageSize, offset]
   )
 
   const tagsMap = await getTagsByPostIds(listResult.rows.map((r) => r.id))
@@ -179,13 +205,13 @@ router.get('/posts', optionalAuth, async (req, res) => {
   return ok(res, { list, total, page, pageSize })
 })
 
+
 // GET /api/posts/:id —— 帖子详情（公开，需登录场景下带 isLiked/isFavorite）
 router.get('/posts/:id', optionalAuth, async (req, res) => {
   const postId = Number(req.params.id)
   if (!isPositiveId(postId)) {
     return fail(res, CODE.PARAM_ERROR, '帖子 id 不合法')
   }
-
   const post = await findPost(postId, req.userId, true)
   if (!post) {
     return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
@@ -195,7 +221,9 @@ router.get('/posts/:id', optionalAuth, async (req, res) => {
 
 // POST /api/posts —— 发布帖子（需登录）
 router.post('/posts', auth, async (req, res) => {
-  const { title, content, categoryId, tags } = req.body || {}
+  // === 新增：接收 attachmentIds 参数 ===
+  const { title, content, categoryId, tags, attachmentIds } = req.body || {}
+
   if (!title || !title.trim()) {
     return fail(res, CODE.PARAM_ERROR, '标题不能为空')
   }
@@ -219,9 +247,9 @@ router.post('/posts', auth, async (req, res) => {
   }
 
   const tagNames = normalizeTags(tags)
-
   const client = await pool.connect()
   let postId
+
   try {
     await client.query('BEGIN')
     const inserted = await client.query(
@@ -232,6 +260,8 @@ router.post('/posts', auth, async (req, res) => {
     )
     postId = inserted.rows[0].id
     await bindTags(client, postId, tagNames)
+    // === 新增：绑定上传好的附件到帖子 ===
+    await bindAttachments(client, postId, attachmentIds)
     await client.query('COMMIT')
   } catch (e) {
     await client.query('ROLLBACK')
@@ -251,7 +281,9 @@ router.put('/posts/:id', auth, async (req, res) => {
     return fail(res, CODE.PARAM_ERROR, '帖子 id 不合法')
   }
 
-  const { title, content, categoryId, tags } = req.body || {}
+  // === 新增：接收 attachmentIds 参数 ===
+  const { title, content, categoryId, tags, attachmentIds } = req.body || {}
+
   if (title && !title.trim()) {
     return fail(res, CODE.PARAM_ERROR, '标题不能为空')
   }
@@ -294,6 +326,11 @@ router.put('/posts/:id', auth, async (req, res) => {
     if (tagNames !== null) {
       await client.query('DELETE FROM post_tags WHERE post_id = $1', [postId])
       await bindTags(client, postId, tagNames)
+    }
+    // === 新增：编辑时传了附件ID就重新绑定 ===
+    if (Array.isArray(attachmentIds)) {
+      await client.query('DELETE FROM post_attachments WHERE post_id = $1', [postId])
+      await bindAttachments(client, postId, attachmentIds)
     }
     await client.query('COMMIT')
   } catch (e) {
