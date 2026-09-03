@@ -91,7 +91,6 @@ onMounted(async () => {
       >
         <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
       </el-select>
-
       <el-input
         v-model="filters.keyword"
         placeholder="搜索标题或正文"
@@ -101,7 +100,6 @@ onMounted(async () => {
         @keyup.enter="handleFilterChange"
         @clear="handleFilterChange"
       />
-
       <el-radio-group v-model="filters.sort" class="filter-bar__sort" @change="handleFilterChange">
         <el-radio-button value="new">最新</el-radio-button>
         <el-radio-button value="hot">最热</el-radio-button>
@@ -111,37 +109,28 @@ onMounted(async () => {
     <!-- 帖子列表 -->
     <el-card v-loading="loading" shadow="never" class="post-list">
       <el-empty v-if="!loading && list.length === 0" description="暂无帖子" />
-
       <div v-for="item in list" :key="item.id" class="post-card">
         <div class="post-card__head">
+          <!-- 点击标题跳转详情页 -->
           <router-link :to="`/post/${item.id}`" class="post-card__title-link">
             <h3 class="post-card__title">{{ item.title }}</h3>
           </router-link>
           <span class="post-card__category">{{ categoryName(item.categoryId) }}</span>
         </div>
-
         <div class="post-card__meta">
           <span class="post-card__author">{{ item.user?.nickname || '匿名用户' }}</span>
           <span class="post-card__time">{{ formatTime(item.createdAt) }}</span>
         </div>
-
         <!-- 标签 -->
         <div v-if="item.tags && item.tags.length" class="post-card__tags">
           <el-tag v-for="tag in item.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
         </div>
-
         <!-- 数据 + 互动按钮 -->
         <div class="post-card__stats">
           <div class="post-card__counts">
-            <span
-              ><el-icon><View /></el-icon> {{ item.viewCount }}</span
-            >
-            <span
-              ><el-icon><ChatDotRound /></el-icon> {{ item.commentCount }}</span
-            >
-            <span
-              ><el-icon><Pointer /></el-icon> {{ item.likeCount }}</span
-            >
+            <span><el-icon><View /></el-icon> {{ item.viewCount }}</span>
+            <span><el-icon><ChatDotRound /></el-icon> {{ item.commentCount }}</span>
+            <span><el-icon><Pointer /></el-icon> {{ item.likeCount }}</span>
           </div>
           <InteractionButtons
             :post-id="item.id"
@@ -153,7 +142,6 @@ onMounted(async () => {
           />
         </div>
       </div>
-
       <el-pagination
         v-model:current-page="page"
         class="post-list__pagination"
@@ -175,55 +163,38 @@ onMounted(async () => {
   margin-bottom: var(--space-md);
   flex-wrap: wrap;
 }
-
 .filter-bar__category {
   width: 140px;
 }
-
 .filter-bar__search {
   max-width: 260px;
 }
-
 .post-list {
   padding: var(--space-md);
 }
-
 .post-card {
   padding: var(--space-md) 0;
   border-bottom: 1px solid var(--border-color-light);
 }
-
 .post-card:last-child {
   border-bottom: none;
 }
-
 .post-card__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
 }
-
-.post-card__title-link {
-  cursor: pointer;
-  min-width: 0;
-}
-
 .post-card__title {
   font-size: 17px;
   color: var(--text-primary);
+  margin: 0;
 }
-
-.post-card__title-link:hover .post-card__title {
-  color: var(--brand-primary);
-}
-
 .post-card__category {
   flex-shrink: 0;
   font-size: 12px;
   color: var(--text-secondary);
 }
-
 .post-card__meta {
   display: flex;
   gap: var(--space-md);
@@ -231,14 +202,12 @@ onMounted(async () => {
   color: var(--text-secondary);
   font-size: 13px;
 }
-
 .post-card__tags {
   display: flex;
   gap: var(--space-xs);
   margin-top: var(--space-sm);
   flex-wrap: wrap;
 }
-
 .post-card__stats {
   display: flex;
   align-items: center;
@@ -247,22 +216,29 @@ onMounted(async () => {
   margin-top: var(--space-sm);
   flex-wrap: wrap;
 }
-
 .post-card__counts {
   display: flex;
   gap: var(--space-md);
   color: var(--text-secondary);
   font-size: 13px;
 }
-
 .post-card__counts span {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
 }
-
 .post-list__pagination {
   margin-top: var(--space-md);
   justify-content: flex-end;
+}
+
+/* 新增：标题跳转链接样式 */
+.post-card__title-link {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s ease;
+}
+.post-card__title-link:hover {
+  color: var(--color-primary);
 }
 </style>
