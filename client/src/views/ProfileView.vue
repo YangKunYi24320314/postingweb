@@ -225,7 +225,7 @@ onMounted(() => {
     <el-card shadow="never" class="profile__info">
       <div class="info__actions">
         <el-dropdown trigger="click" @command="handleCommand">
-          <el-button :icon="MoreFilled" circle text />
+          <el-button :icon="MoreFilled" circle text class="info__more-btn" />
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="editProfile">修改个人信息</el-dropdown-item>
@@ -243,8 +243,10 @@ onMounted(() => {
           {{ user?.nickname?.charAt(0) || 'U' }}
         </el-avatar>
       </div>
-      <div class="info__nickname">{{ user?.nickname || '未设置昵称' }}</div>
-      <div class="info__username">{{ user ? '@' + user.username : '' }}</div>
+      <div class="info__identity">
+        <div class="info__nickname">{{ user?.nickname || '未设置昵称' }}</div>
+        <div class="info__username">{{ user ? '@' + user.username : '' }}</div>
+      </div>
       <div class="info__bio">{{ user?.bio || '这个人很懒，什么都没有写' }}</div>
       <div class="profile__stats">
         <div class="profile__stat">
@@ -387,15 +389,68 @@ onMounted(() => {
 <style scoped>
 .profile__info {
   position: relative;
+  overflow: hidden;
   text-align: center;
   padding: var(--space-lg);
   margin-bottom: var(--space-md);
 }
-
+.profile__info::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 66.66%;
+  background: url('/profile-bg.png') center / cover no-repeat;
+  opacity: 0.6;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
+  pointer-events: none;
+}
+.profile__info::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 66.66%;
+  background: linear-gradient(
+    135deg,
+    var(--brand-primary) 0%,
+    transparent 50%,
+    var(--brand-primary) 100%
+  );
+  background-size: 200% 200%;
+  opacity: 0.5;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
+  animation: profile-gradient-flow 7s ease-in-out infinite;
+  pointer-events: none;
+}
+.profile__info :deep(.el-card__body) {
+  position: relative;
+  z-index: 1;
+}
+@keyframes profile-gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
 .info__actions {
   position: absolute;
   top: var(--space-md);
   right: var(--space-md);
+}
+.info__more-btn {
+  background: color-mix(in srgb, var(--bg-white) 60%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .info__avatar {
@@ -437,17 +492,29 @@ onMounted(() => {
   opacity: 0;
 }
 
-.info__nickname {
+.info__identity {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
   margin-top: var(--space-md);
+  padding: var(--space-xs) var(--space-lg);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--bg-white) 55%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.info__nickname {
   font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .info__username {
-  margin-top: var(--space-xs);
   font-size: 12px;
   color: var(--text-placeholder);
+  line-height: 1.2;
 }
 
 .info__bio {
