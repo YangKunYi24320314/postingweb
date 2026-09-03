@@ -17,3 +17,13 @@ export function getMe() {
 export function updateProfile(data) {
   return request.put('/auth/profile', data)
 }
+
+export function uploadAvatar(file) {
+  const formData = new FormData()
+  formData.append('avatar', file)
+  return request.post('/auth/avatar', formData)
+}
+
+export function getPublicUser(id) {
+  return request.get(`/users/${id}`)
+}

@@ -1,7 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 
-const { validateCredentials, normalizeNickname } = require('../utils/auth-validation')
+const { validateCredentials } = require('../utils/auth-validation')
 
 test('credentials accept a trimmed username and six-character password', () => {
   assert.deepEqual(validateCredentials('  scu123  ', '123456'), {
@@ -16,9 +16,4 @@ test('credentials reject passwords shorter than six characters', () => {
 
 test('credentials reject usernames outside the allowed length', () => {
   assert.throws(() => validateCredentials('ab', '123456'), /用户名长度应为 3-50 位/)
-})
-
-test('nickname falls back to username and trims optional input', () => {
-  assert.equal(normalizeNickname('scu123', '  东门猛男  '), '东门猛男')
-  assert.equal(normalizeNickname('scu123', ''), 'scu123')
 })

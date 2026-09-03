@@ -21,9 +21,4 @@ function validateCredentials(username, password) {
   return { username: normalizedUsername, password: normalizedPassword }
 }
 
-function normalizeNickname(username, nickname) {
-  const normalized = typeof nickname === 'string' ? nickname.trim() : ''
-  return normalized || username
-}
-
-module.exports = { validateCredentials, normalizeNickname }
+module.exports = { validateCredentials }

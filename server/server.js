@@ -6,12 +6,14 @@ const path = require('path')
 require('dotenv').config()
 
 const { ok, fail, CODE } = require('./utils/response')
+const { UPLOAD_DIR } = require('./utils/avatar-upload')
 
 const app = express()
 
 // 让服务器能解析 JSON 请求体、允许前端跨域访问
 app.use(express.json())
 app.use(cors())
+app.use('/uploads', express.static(UPLOAD_DIR))
 
 // 简单连通性测试
 app.get('/api/hello', (req, res) => {

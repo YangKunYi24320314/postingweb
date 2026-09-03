@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotRound, EditPen, Clock } from '@element-plus/icons-vue'
+import { ChatDotRound } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { clearToken, getToken } from '../api/request'
 import { getAuthAction, logout } from '../utils/auth-navigation'
@@ -15,8 +15,6 @@ const activeMenu = computed(() => route.path)
 
 const menuItems = [
   { index: '/', label: '首页', icon: ChatDotRound },
-  { index: '/posts', label: '帖子广场', icon: EditPen },
-  { index: '/records', label: '记录中心', icon: Clock },
 ]
 
 function handleAuthAction() {
@@ -118,6 +116,9 @@ function handleLogout() {
 }
 
 .layout__menu {
+  flex: 1;
+  min-width: 0;
+  margin: 0 var(--space-lg);
   border-bottom: none;
   height: 100%;
 }

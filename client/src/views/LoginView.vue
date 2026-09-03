@@ -9,7 +9,6 @@ const router = useRouter()
 const form = reactive({
   username: '',
   password: '',
-  nickname: '',
   confirmPassword: '',
 })
 const loading = ref(false)
@@ -39,7 +38,7 @@ async function handleSubmit() {
     // login() 走统一封装：返回的 data 里就是 { token, user }
     const action = isRegister.value ? register : login
     const payload = isRegister.value
-      ? { username, password: form.password, nickname: form.nickname.trim() }
+      ? { username, password: form.password }
       : { username, password: form.password }
     const data = await action(payload)
     saveToken(data.token)
@@ -81,9 +80,6 @@ async function handleSubmit() {
             size="large"
             @keyup.enter="handleSubmit"
           />
-        </el-form-item>
-        <el-form-item v-if="isRegister">
-          <el-input v-model="form.nickname" placeholder="昵称（可选）" size="large" />
         </el-form-item>
         <el-button
           type="primary"
