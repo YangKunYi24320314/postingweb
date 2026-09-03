@@ -25,10 +25,16 @@ const routes = [
         meta: { title: '帖子广场' },
       },
       {
+        path: 'post/:id',
+        name: 'PostDetail',
+        component: () => import('../views/PostDetailView.vue'),
+        meta: { title: '帖子详情' },
+      },
+      {
         path: 'write',
         name: 'WritePost',
         component: () => import('../views/WritePostView.vue'),
-        meta: { title: '写帖子' }
+        meta: { title: '写帖子' },
       },
       {
         path: 'records',
