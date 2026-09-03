@@ -41,6 +41,18 @@ test('contact auth service logs in with a bound phone identifier', async () => {
   assert.match(pool.calls[0][0], /WHERE phone = \$1/i)
 })
 
+test('contact auth service rejects a short login password as invalid input', async () => {
+  const service = createContactAuthService({
+    pool: createPool([]),
+    comparePassword: async () => assert.fail('should not compare invalid input'),
+  })
+
+  await assert.rejects(
+    service.login({ identifier: 'scu123', password: '12345' }),
+    /密码长度不能少于 6 位/
+  )
+})
+
 test('contact auth service rejects incorrect current password during a change', async () => {
   const pool = createPool([{ rowCount: 1, rows: [{ ...userRow }] }])
   const service = createContactAuthService({

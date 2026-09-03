@@ -36,6 +36,7 @@ function createContactAuthService({
   }
 
   async function login({ identifier, password }) {
+    validatePassword(password)
     const user = await findUserByIdentifier(identifier)
     if (!user || !(await comparePassword(password, user.password_hash))) {
       throw serviceError('用户名、手机号或邮箱与密码不匹配', 'AUTH_LOGIN_FAILED')
