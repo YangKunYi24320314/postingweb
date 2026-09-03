@@ -98,11 +98,13 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
   - 认证：`POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/me`、`PUT /api/auth/profile`
   - 帖子：`GET/POST /api/posts`、`GET/PUT/DELETE /api/posts/{id}`
   - 评论：`GET/POST /api/posts/{id}/comments`、`PUT/DELETE /api/comments/{id}`
-  - 互动：`POST/DELETE /api/posts/{id}/like`、`POST/DELETE /api/posts/{id}/favorite`
-  - 记录：`POST /api/posts/{id}/view`、`GET /api/me/history` 等
-  - 其他：`GET /api/categories`、`GET /api/tags`、`GET /api/recommend/posts`
-- **数据库核心表**：`users`、`categories`、`posts`、`tags`、`post_tags`、`comments`、`post_likes`、`favorites`、`histories`（+ 可选的 `user_tag_preferences`）。
+  - 互动：`POST/DELETE /api/posts/{id}/like`、`POST/DELETE /api/posts/{id}/favorite`、`POST/DELETE /api/comments/{id}/like`
+  - 记录：`POST /api/posts/{id}/view`、`GET/DELETE /api/me/history`、`GET /api/me/posts`、`GET /api/me/favorites`、`GET /api/me/likes`
+  - 附件：`POST /api/attachments/upload`（需登录）、`GET /api/attachments/{id}/download`（公开）
+  - 其他：`POST /api/upload`（旧版通用图片上传，保留但**不在契约内**）、`GET /api/recommend/posts`（二期可选）
+- **数据库核心表**：`users`、`categories`、`posts`、`tags`、`post_tags`、`post_attachments`、`comments`、`post_likes`、`comment_likes`、`favorites`、`histories`（+ 可选的 `user_tag_preferences`）。
 - **关键业务规则**：帖子**软删除**（`is_deleted`）；帖子表 `*_count` 计数在写入时同事务更新（别每次 COUNT）；点赞/收藏/浏览记录用唯一约束防重复。
+- **关于上传**：附件已进契约：数据库有 `post_attachments` 表，接口为 `/api/attachments/upload`（`multipart/form-data`，字段固定为 `file`）和 `/api/attachments/{id}/download`；文件存后端 `server/static/attachments/`。上传返回 `{ id, original_filename, file_size }`，`post_id` 初始为空（暂存），要绑定帖子需自行写更新逻辑。注意：旧版 `POST /api/upload` 不在契约内，别混用。
 
 ## 7. 前端 UI 约定
 
