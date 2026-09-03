@@ -57,13 +57,32 @@ async function getTagsByPostIds(postIds) {
   return map
 }
 
-// GET /api/me/posts —— 我发布的帖子（需登录，分页）
+// 组装「我的内容」列表的过滤条件：用户条件 + 软删除 + 可选关键词模糊匹配。
+// userCond 形如 "p.user_id" / "f.user_id" / "pl.user_id"。返回 { where, params }。
+function buildMyWhere(userCond, userId, keyword) {
+  const conditions = [`${userCond} = $1`, 'p.is_deleted = false']
+  const params = [userId]
+  if (keyword) {
+    params.push(`%${keyword}%`)
+    conditions.push(
+      `(p.title ILIKE $${params.length} OR p.content ILIKE $${params.length} OR u.nickname ILIKE $${params.length})`
+    )
+  }
+  return { where: conditions.join(' AND '), params }
+}
+
+// GET /api/me/posts —— 我发布的帖子（需登录，分页，支持 keyword）
 router.get('/me/posts', auth, async (req, res) => {
   const { page, pageSize, offset } = parsePage(req.query)
+  const keyword = String(req.query.keyword || '').trim()
+  const { where, params } = buildMyWhere('p.user_id', req.userId, keyword)
 
   const count = await pool.query(
-    'SELECT COUNT(*)::int AS total FROM posts WHERE user_id = $1 AND is_deleted = false',
-    [req.userId]
+    `SELECT COUNT(*)::int AS total
+     FROM posts p
+     JOIN users u ON u.id = p.user_id
+     WHERE ${where}`,
+    params
   )
   const total = count.rows[0].total
 
@@ -75,10 +94,10 @@ router.get('/me/posts', auth, async (req, res) => {
      FROM posts p
      JOIN users u ON u.id = p.user_id
      LEFT JOIN categories c ON c.id = p.category_id
-     WHERE p.user_id = $1 AND p.is_deleted = false
+     WHERE ${where}
      ORDER BY p.created_at DESC
-     LIMIT $2 OFFSET $3`,
-    [req.userId, pageSize, offset]
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, pageSize, offset]
   )
 
   const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))
@@ -89,16 +108,19 @@ router.get('/me/posts', auth, async (req, res) => {
   return ok(res, { list: mapped, total, page, pageSize })
 })
 
-// GET /api/me/favorites —— 我收藏的帖子（需登录，分页）
+// GET /api/me/favorites —— 我收藏的帖子（需登录，分页，支持 keyword）
 router.get('/me/favorites', auth, async (req, res) => {
   const { page, pageSize, offset } = parsePage(req.query)
+  const keyword = String(req.query.keyword || '').trim()
+  const { where, params } = buildMyWhere('f.user_id', req.userId, keyword)
 
   const count = await pool.query(
     `SELECT COUNT(*)::int AS total
      FROM favorites f
      JOIN posts p ON p.id = f.post_id
-     WHERE f.user_id = $1 AND p.is_deleted = false`,
-    [req.userId]
+     JOIN users u ON u.id = p.user_id
+     WHERE ${where}`,
+    params
   )
   const total = count.rows[0].total
 
@@ -112,10 +134,10 @@ router.get('/me/favorites', auth, async (req, res) => {
      JOIN posts p ON p.id = f.post_id
      JOIN users u ON u.id = p.user_id
      LEFT JOIN categories c ON c.id = p.category_id
-     WHERE f.user_id = $1 AND p.is_deleted = false
+     WHERE ${where}
      ORDER BY f.created_at DESC
-     LIMIT $2 OFFSET $3`,
-    [req.userId, pageSize, offset]
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, pageSize, offset]
   )
 
   const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))
@@ -126,16 +148,19 @@ router.get('/me/favorites', auth, async (req, res) => {
   return ok(res, { list: mapped, total, page, pageSize })
 })
 
-// GET /api/me/likes —— 我点赞的帖子（需登录，分页）
+// GET /api/me/likes —— 我点赞的帖子（需登录，分页，支持 keyword）
 router.get('/me/likes', auth, async (req, res) => {
   const { page, pageSize, offset } = parsePage(req.query)
+  const keyword = String(req.query.keyword || '').trim()
+  const { where, params } = buildMyWhere('pl.user_id', req.userId, keyword)
 
   const count = await pool.query(
     `SELECT COUNT(*)::int AS total
      FROM post_likes pl
      JOIN posts p ON p.id = pl.post_id
-     WHERE pl.user_id = $1 AND p.is_deleted = false`,
-    [req.userId]
+     JOIN users u ON u.id = p.user_id
+     WHERE ${where}`,
+    params
   )
   const total = count.rows[0].total
 
@@ -149,10 +174,10 @@ router.get('/me/likes', auth, async (req, res) => {
      JOIN posts p ON p.id = pl.post_id
      JOIN users u ON u.id = p.user_id
      LEFT JOIN categories c ON c.id = p.category_id
-     WHERE pl.user_id = $1 AND p.is_deleted = false
+     WHERE ${where}
      ORDER BY pl.created_at DESC
-     LIMIT $2 OFFSET $3`,
-    [req.userId, pageSize, offset]
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, pageSize, offset]
   )
 
   const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))

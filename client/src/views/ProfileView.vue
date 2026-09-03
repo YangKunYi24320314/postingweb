@@ -1,8 +1,8 @@
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { MoreFilled, Edit, View, ChatDotRound, Pointer } from '@element-plus/icons-vue'
+import { MoreFilled, Edit, View, ChatDotRound, Pointer, Search } from '@element-plus/icons-vue'
 import { getMe, updateProfile } from '../api/auth'
 import { getMyPosts, getMyFavorites, getMyLikes, uploadAvatar } from '../api/record'
 import RecentHistoryPreview from '../components/RecentHistoryPreview.vue'
@@ -19,6 +19,9 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
 const loading = ref(false)
+const keyword = ref('') // 搜索关键词（标题/正文/作者）
+let searchTimer = null // 防抖定时器
+let requestSeq = 0 // 请求序号：用于丢弃过期的旧请求结果
 
 // 个人信息编辑弹窗
 const editVisible = ref(false)
@@ -43,17 +46,35 @@ function goPost(row) {
 }
 
 async function loadList() {
+  const seq = ++requestSeq
   loading.value = true
   try {
-    const data = await fetchers[activeTab.value]({ page: page.value, pageSize: pageSize.value })
+    const data = await fetchers[activeTab.value]({
+      page: page.value,
+      pageSize: pageSize.value,
+      keyword: keyword.value || undefined,
+    })
+    if (seq !== requestSeq) return // 已有更新的请求，丢弃本次过期结果
     list.value = data.list
     total.value = data.total
   } catch (err) {
+    if (seq !== requestSeq) return
     ElMessage.error(err.message || '加载失败')
   } finally {
-    loading.value = false
+    if (seq === requestSeq) {
+      loading.value = false
+    }
   }
 }
+
+// 监听关键词变化：防抖 300ms 后回到第一页并重新加载（切换页签不会清空 keyword）
+watch(keyword, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    loadList()
+  }, 300)
+})
 
 function handleTabChange(name) {
   activeTab.value = name
@@ -199,7 +220,16 @@ onMounted(() => {
 
     <!-- 我的内容（三个页签） -->
     <el-card v-loading="loading" shadow="never">
-      <h2 class="profile__title">个人主页</h2>
+      <div class="profile__header">
+        <h2 class="profile__title">我的</h2>
+        <el-input
+          v-model="keyword"
+          class="profile__search"
+          placeholder="搜索标题、正文或作者"
+          clearable
+          :prefix-icon="Search"
+        />
+      </div>
 
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <el-tab-pane label="我发布的" name="posts" />
@@ -207,7 +237,10 @@ onMounted(() => {
         <el-tab-pane label="我点赞的" name="likes" />
       </el-tabs>
 
-      <el-empty v-if="!loading && list.length === 0" description="暂无内容" />
+      <el-empty
+        v-if="!loading && list.length === 0"
+        :description="keyword ? '没有匹配的内容' : '暂无内容'"
+      />
       <div v-for="row in list" :key="row.id" class="profile-post-card" @click="goPost(row)">
         <div class="profile-post-card__head">
           <h3 class="profile-post-card__title">{{ row.title }}</h3>
@@ -443,10 +476,19 @@ onMounted(() => {
   margin-top: var(--space-sm);
 }
 
+.profile__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+}
 .profile__title {
   font-size: 18px;
   color: var(--text-primary);
-  margin-bottom: var(--space-md);
+}
+.profile__search {
+  width: 240px;
 }
 
 .profile__pagination {
