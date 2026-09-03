@@ -13,6 +13,7 @@ tags:
   - name: 评论
   - name: 互动
   - name: 记录中心
+  - name: 附件
   - name: 推荐
 
 # ============================================================
@@ -602,6 +603,50 @@ paths:
                     properties:
                       data: { $ref: '#/components/schemas/PageResult' }
 
+  # ======================= 附件 =======================
+  /attachments/upload:
+    post:
+      tags: [附件]
+      summary: 上传附件（multipart/form-data，字段 file，最大100MB）
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Attachment' }
+
+  /attachments/{id}/download:
+    get:
+      tags: [附件]
+      summary: 下载附件（公开，无需登录）
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 以原始文件名返回文件二进制流
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
   # ======================= 推荐（二期可选） =======================
   /recommend/posts:
     get:
@@ -723,3 +768,14 @@ components:
       properties:
         isFavorite: { type: boolean }
         favoriteCount: { type: integer }
+
+    Attachment:
+      type: object
+      properties:
+        id: { type: integer }
+        post_id: { type: integer, nullable: true }
+        original_filename: { type: string, example: 课件.pdf }
+        file_path: { type: string, example: /static/attachments/xxx.pdf }
+        file_size: { type: integer, example: 2048000 }
+        mime_type: { type: string, example: application/pdf }
+        created_at: { type: string, format: date-time }

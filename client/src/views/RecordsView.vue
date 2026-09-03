@@ -4,11 +4,11 @@ import { ElMessage } from 'element-plus'
 import { getHistory, clearHistory } from '../api/record'
 
 // 页面数据（都用 ref 包起来，改了自动更新界面）
-const list = ref([])        // 表格要显示的行
-const total = ref(0)        // 总条数（分页用）
-const page = ref(1)         // 当前页码
-const pageSize = ref(10)    // 每页条数
-const loading = ref(false)  // 是否加载中
+const list = ref([]) // 表格要显示的行
+const total = ref(0) // 总条数（分页用）
+const page = ref(1) // 当前页码
+const pageSize = ref(10) // 每页条数
+const loading = ref(false) // 是否加载中
 
 // 拉取浏览记录
 async function loadHistory() {

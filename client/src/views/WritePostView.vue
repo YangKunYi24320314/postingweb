@@ -1,185 +1,210 @@
+<template>
+  <div class="write-page">
+      <div class="form-card">
+          <h2>发布新帖子</h2>
+      
+          <!-- 标题 -->
+          <el-input
+          v-model="form.title"
+          placeholder="请输入帖子标题"
+          class="input-item"
+          />
+      
+          <!-- 正文内容 -->
+          <el-input
+          v-model="form.content"
+          type="textarea"
+          :rows="5"
+          placeholder="写下你的内容..."
+          class="input-item"
+          />
+          <!-- 分类选择（下拉单选） -->
+          <el-select
+              v-model="form.categoryId"
+              placeholder="选择分类"
+              clearable
+              class="input-item"
+          >
+              <el-option
+                  v-for="cat in categories"
+                  :key="cat.id"
+                  :label="cat.name"
+                  :value="cat.id"
+              />
+          </el-select>
+          <!-- 标签选择（下拉多选、可搜索、可手动输入新标签） -->
+          <el-select
+              v-model="form.tags"
+              multiple
+              filterable
+              allow-create
+              default-first-option
+              placeholder="选择或输入标签（最多10个）"
+              class="input-item"
+          >
+              <el-option
+                  v-for="tag in tagList"
+                  :key="tag"
+                  :label="tag"
+                  :value="tag"
+              />
+          </el-select>
+      
+          <!-- 文件上传组件：支持图片 / 文档 / 视频 / 压缩包 -->
+          <el-upload
+          class="upload-area input-item"
+          action=""
+          :http-request="uploadFile"
+          :file-list="fileList"
+          :limit="5"
+          multiple
+          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.mp4,.mov,.avi,.zip,.rar"
+          list-type="text"
+          >
+          <el-button type="primary">选择图片 / 文档 / 视频</el-button>
+          <template #tip>
+              <div class="el-upload__tip">支持图片、PDF、Word、Excel、视频、压缩包，单文件最大100MB，最多5个</div>
+          </template>
+          </el-upload>
+      
+          <el-button
+          type="primary"
+          class="submit-btn"
+          @click="submitPost"
+          :loading="loading"
+          >
+          提交发布
+          </el-button>
+      </div>
+  </div>
+</template>
+
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { createPost } from '../api/post'
+import { useRouter } from 'vue-router'
+// 引入分类、标签查询接口
 import { getCategories, getTags } from '../api/catalog'
-import { uploadFile } from '../api/upload'
-import { getToken } from '../api/request'
+// 引入发帖接口 + 附件上传接口
+import { createPost, uploadAttachment } from '../api/post'
 
 const router = useRouter()
 const loading = ref(false)
+const fileList = ref([])
+// 保存上传成功后的附件ID数组，提交帖子时一起传给后端
+const attachmentIds = ref([])
+// 分类、标签下拉选项
 const categories = ref([])
-const tags = ref([])
+const tagList = ref([])
 
-const form = reactive({
+const form = ref({
   title: '',
   content: '',
-  categoryId: null,
-  tags: [],
+  categoryId: null, // 分类ID
+  tags: [] // 标签数组，不再是字符串
 })
 
-// 上传：走统一的封装，返回 data 里就是 { url }
-async function uploadFileHandler(options) {
+// 页面加载时拉取分类和已有标签
+async function loadOptions() {
+  try {
+    const catRes = await getCategories()
+    const tagRes = await getTags()
+
+    // 兼容两种返回格式：直接返回数组 / 包裹在 data 字段里
+    categories.value = Array.isArray(catRes) ? catRes : (catRes.data || [])
+    tagList.value = Array.isArray(tagRes) ? tagRes : (tagRes.data || [])
+  } catch (e) {
+    console.error('加载分类/标签失败', e)
+  }
+}
+
+onMounted(() => {
+  loadOptions()
+})
+
+// 自定义上传请求：单文件上传
+const uploadFile = async (options) => {
   const file = options.file
-  const MAX_SIZE = 10 * 1024 * 1024
+  // 单文件最大100MB，和后端限制保持一致
+  const MAX_SIZE = 100 * 1024 * 1024
   if (file.size > MAX_SIZE) {
-    ElMessage.error(`${file.name} 文件超过 10MB，无法上传`)
-    options.onError()
-    return
+      ElMessage.error(`${file.name} 文件超过100MB，无法上传`)
+      options.onError()
+      return
   }
 
   const formData = new FormData()
   formData.append('file', file)
 
   try {
-    await uploadFile(formData)
-    ElMessage.success(`${file.name} 上传成功`)
-    options.onSuccess()
+      // 调用附件上传接口，返回附件id、原始文件名、文件大小
+      const res = await uploadAttachment(formData)
+      // 只保存附件ID，提交帖子时用来绑定
+      attachmentIds.value.push(res.id)
+      ElMessage.success(`${file.name} 上传成功`)
+      options.onSuccess()
   } catch (err) {
-    ElMessage.error(err.message || `${file.name} 上传失败`)
-    options.onError()
+      ElMessage.error(`${file.name} 上传失败`)
+      console.error(err)
+      options.onError()
   }
 }
 
-// 提交：只提交契约里的字段（标题/正文/分类/标签）。注意：附件 URL 不在契约内，暂不随帖保存。
-async function submitPost() {
-  if (!form.title.trim()) {
-    ElMessage.warning('请输入标题')
-    return
-  }
-  if (!form.content.trim()) {
-    ElMessage.warning('请输入正文')
-    return
+// 提交发布帖子
+const submitPost = async () => {
+  if (!form.value.title || !form.value.content) {
+      ElMessage.warning('标题和内容不能为空')
+      return
   }
   loading.value = true
   try {
-    await createPost({
-      title: form.title.trim(),
-      content: form.content.trim(),
-      categoryId: form.categoryId || null,
-      tags: form.tags,
-    })
-    ElMessage.success('发帖成功！')
-    router.push({ name: 'PostPage' })
-  } catch (e) {
-    ElMessage.error(e.message || '发布失败')
+      await createPost({
+          title: form.value.title,
+          content: form.value.content,
+          categoryId: form.value.categoryId,
+          tags: form.value.tags, // 直接传数组，后端自动处理
+          attachmentIds: attachmentIds.value
+      })
+      ElMessage.success('发帖成功！')
+      // 跳转到帖子广场
+      router.push('/post-page')
+  } catch (err) {
+      ElMessage.error('发布失败')
+      console.error(err)
   } finally {
-    loading.value = false
+      loading.value = false
   }
 }
-
-onMounted(async () => {
-  // 未登录直接跳登录页（发帖需要登录）
-  if (!getToken()) {
-    router.push({ name: 'Login' })
-    return
-  }
-  try {
-    const [cats, tgs] = await Promise.all([getCategories(), getTags()])
-    categories.value = cats
-    tags.value = tgs
-  } catch (e) {
-    ElMessage.error(e.message || '分类/标签加载失败')
-  }
-})
 </script>
 
-<template>
-  <div class="page-container">
-    <el-card shadow="never" class="write-card">
-      <h2 class="write-card__title">发布新帖子</h2>
-
-      <el-form :model="form" label-position="top">
-        <el-form-item label="标题">
-          <el-input
-            v-model="form.title"
-            placeholder="请输入帖子标题"
-            maxlength="200"
-            show-word-limit
-          />
-        </el-form-item>
-
-        <el-form-item label="正文">
-          <el-input
-            v-model="form.content"
-            type="textarea"
-            :rows="6"
-            placeholder="写下你的内容..."
-          />
-        </el-form-item>
-
-        <el-form-item label="分类">
-          <el-select
-            v-model="form.categoryId"
-            placeholder="选择分类"
-            clearable
-            class="write-card__select"
-          >
-            <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="标签（可多选，最多 10 个）">
-          <el-select
-            v-model="form.tags"
-            multiple
-            filterable
-            allow-create
-            default-first-option
-            placeholder="选择或输入标签"
-            class="write-card__select"
-          >
-            <el-option v-for="t in tags" :key="t" :label="t" :value="t" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="附件（可选）">
-          <el-upload
-            class="write-card__upload"
-            action="#"
-            :http-request="uploadFileHandler"
-            multiple
-            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.mp4,.mov,.avi"
-          >
-            <el-button>选择文件</el-button>
-            <template #tip>
-              <div class="el-upload__tip">支持图片、PDF、Word、Excel、视频（单文件最大 10MB）</div>
-            </template>
-          </el-upload>
-        </el-form-item>
-
-        <el-button type="primary" class="write-card__submit" :loading="loading" @click="submitPost">
-          提交发布
-        </el-button>
-      </el-form>
-    </el-card>
-  </div>
-</template>
-
 <style scoped>
-.write-card {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: var(--space-lg);
+.write-page {
+  min-height: calc(100vh - 120px);
+  background-color: #f5f7fa;
+  display: flex;
+  justify-content: center;
+  padding: 40px 16px;
 }
-
-.write-card__title {
+.form-card {
+  width: 420px;
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+h2 {
+  text-align: center;
+  margin-bottom: 24px;
   font-size: 20px;
-  color: var(--text-primary);
-  margin-bottom: var(--space-lg);
 }
-
-.write-card__select {
+.input-item {
+  margin-bottom: 18px;
   width: 100%;
 }
-
-.write-card__upload {
+.submit-btn {
   width: 100%;
 }
-
-.write-card__submit {
-  width: 100%;
-  margin-top: var(--space-sm);
+.upload-area {
+  margin-bottom:18px;
 }
 </style>
