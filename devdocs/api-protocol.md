@@ -184,17 +184,34 @@
 
 ---
 
-## 八、推荐（模块5，可选，二期）
+## 八、附件 Attachments（帖子附件）
 
-### 8.1 `GET /recommend/posts` — 个性化推荐（需登录）
+> 附件用于帖子里的文件/图片/视频。上传后返回附件 id，前端再把 `post_id` 绑定到帖子。
+> 上传的原始文件存放在后端 `server/static/attachments/`，通过 `/static/...` 或下载接口访问。
+
+### 8.1 `POST /attachments/upload` — 上传附件（需登录）
+**请求**：`multipart/form-data`，字段名固定为 `file`（单文件，最大 100MB）。
+**响应 data**：新建附件对象
+```json
+{ "id": 1, "original_filename": "课件.pdf", "file_size": 2048000 }
+```
+
+### 8.2 `GET /attachments/:id/download` — 下载附件（公开，无需登录）
+**响应**：以原始文件名返回文件二进制流（`Content-Disposition` 为附件下载）。
+
+---
+
+## 九、推荐（模块5，可选，二期）
+
+### 9.1 `GET /recommend/posts` — 个性化推荐（需登录）
 **请求参数**：`page` / `pageSize`
 **响应 data**：分页结构，按用户偏好的标签排序推荐。
 > 简化实现：根据用户点赞/收藏/浏览过的帖子标签统计偏好，返回偏好标签下的相似帖子。
 
 ---
 
-## 九、给后端/前端的提示
+## 十、给后端/前端的提示
 
-1. **后端实现顺序建议**：`auth` → `posts` → `comments` → `like/favorite` → `history` → `recommend`。
+1. **后端实现顺序建议**：`auth` → `posts` → `comments` → `like/favorite` → `history` → `attachments` → `recommend`。
 2. **前端调接口**：永远通过封装好的 `src/api/xxx.js`，不要在页面里直接写请求（见前端架构约定）。
 3. **返回结构固定**：后端再简单也要返回 `{ code, message, data }` 三层，方便前端统一处理 `message`。
