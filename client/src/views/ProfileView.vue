@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getMyPosts, getMyFavorites, getMyLikes } from '../api/record'
+import RecentHistoryPreview from '../components/RecentHistoryPreview.vue'
 
 const activeTab = ref('posts') // 当前激活的页签
 const list = ref([])
@@ -88,6 +89,7 @@ onMounted(loadList)
         @current-change="handlePageChange"
       />
     </el-card>
+    <RecentHistoryPreview />
   </div>
 </template>
 
