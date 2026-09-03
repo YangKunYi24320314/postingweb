@@ -1,13 +1,29 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-// 导入现有详情接口
-import { getPostById } from '../api/post'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+// 导入帖子接口 + 认证接口
+import { getPostById, deletePost } from '../api/post'
+import { getMe } from '../api/auth'
 
 const route = useRoute()
+const router = useRouter()
 const loading = ref(false)
 const post = ref(null)
+const currentUser = ref(null)
+
+// 权限判断：仅帖子作者 或 管理员 可删除
+const isCanDelete = computed(() => {
+  if (!post.value || !currentUser.value) return false
+  
+  const currentUserId = currentUser.value.id || currentUser.value.userId
+  const authorId = post.value.user?.id || post.value.user?.userId
+  
+  const isAuthor = currentUserId && authorId && currentUserId === authorId
+  const isAdmin = currentUser.value.role === 'admin'
+  
+  return isAuthor || isAdmin
+})
 
 // 格式化时间，和列表页保持一致
 function formatTime(iso) {
@@ -30,14 +46,43 @@ function handleDownload(file) {
   window.open(`/api/attachments/${file.id}/download`, '_blank')
 }
 
-// 加载帖子详情
+// 删除帖子
+async function handleDelete() {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除该帖子吗？删除后无法恢复。',
+      '删除确认',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    await deletePost(route.params.id)
+    
+    ElMessage.success('帖子删除成功')
+    router.push('/post-page')
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error(err.message || '删除失败，请重试')
+    }
+  }
+}
+
+// 加载帖子详情 + 当前登录用户信息
 async function loadDetail() {
   loading.value = true
   try {
-    const data = await getPostById(route.params.id)
-    post.value = data
+    // 并行请求，提升加载速度
+    const [postData, userData] = await Promise.all([
+      getPostById(route.params.id),
+      getMe()
+    ])
+    post.value = postData
+    currentUser.value = userData
   } catch (err) {
-    ElMessage.error(err.message || '帖子加载失败')
+    ElMessage.error(err.message || '页面加载失败')
     console.error('详情加载错误：', err)
   } finally {
     loading.value = false
@@ -56,29 +101,37 @@ onMounted(() => {
       <div v-if="!loading && !post" class="empty-tip">
         <el-empty description="帖子不存在或已删除" />
       </div>
-
       <!-- 详情内容 -->
       <template v-if="post">
-        <h2 class="post-title">{{ post.title }}</h2>
+        <!-- 标题栏：左侧标题 + 右侧删除按钮 -->
+        <div class="post-header">
+          <h2 class="post-title">{{ post.title }}</h2>
+          <el-button
+            v-if="isCanDelete"
+            type="danger"
+            size="small"
+            plain
+            @click="handleDelete"
+          >
+            删除帖子
+          </el-button>
+        </div>
         
         <div class="post-meta">
           <span>作者：{{ post.user?.nickname || '匿名用户' }}</span>
           <span>发布时间：{{ formatTime(post.createdAt) }}</span>
           <span>浏览量：{{ post.viewCount }}</span>
         </div>
-
         <!-- 标签 -->
         <div v-if="post.tags && post.tags.length" class="post-tags">
           <el-tag v-for="tag in post.tags" :key="tag" size="small" effect="plain">
             {{ tag }}
           </el-tag>
         </div>
-
         <!-- 正文 -->
         <div class="post-content">
           {{ post.content }}
         </div>
-
         <!-- 附件下载区域 -->
         <div v-if="post.attachments && post.attachments.length" class="attachment-block">
           <h4>📎 附件下载</h4>
@@ -105,8 +158,15 @@ onMounted(() => {
   margin: 20px auto;
   padding: 0 20px;
 }
+/* 标题栏布局 */
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
 .post-title {
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 24px;
   color: var(--text-primary);
 }
@@ -136,7 +196,6 @@ onMounted(() => {
 .empty-tip {
   padding: 60px 0;
 }
-
 /* 附件下载样式 */
 .attachment-block {
   margin-top: 30px;
