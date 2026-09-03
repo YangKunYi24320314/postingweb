@@ -150,6 +150,8 @@ function forwardReload() {
       <div class="comment__footer">
         <InteractionButtons
           show-comment-like
+          :show-post-like="false"
+          :show-favorite="false"
           :comment-id="comment.id"
           :liked="comment.isLiked"
           :like-count="comment.likeCount"
