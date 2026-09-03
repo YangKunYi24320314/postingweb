@@ -190,6 +190,38 @@
 - `GET /me/favorites` — 我收藏的帖子（分页）
 - `GET /me/likes` — 我点赞的帖子（分页，可选）
 
+三个接口返回的分页列表项结构一致（复用 `Post` 结构，另含个人主页渲染专用字段）：
+
+```json
+{
+  "id": 1, "title": "标题", "categoryId": 2, "categoryName": "分类名",
+  "content": "帖子正文", "tags": ["标签1", "标签2"],
+  "author": { "id": 1, "nickname": "作者昵称" },
+  "viewCount": 10, "likeCount": 3, "favoriteCount": 2, "commentCount": 5,
+  "createdAt": "2026-09-03T08:00:00.000Z",
+  "favoritedAt": "2026-09-03T09:00:00.000Z",
+  "likedAt": "2026-09-03T10:00:00.000Z"
+}
+```
+
+> 说明：
+> - 列表项作者字段用 `author`（等价于 `Post` 结构里的 `user`，只含 `id` + `nickname`）。
+> - `content` / `categoryName` / `tags` 是个人主页卡片渲染与悬浮预览正文所需字段。
+> - `favoritedAt` 仅 `/me/favorites` 返回；`likedAt` 仅 `/me/likes` 返回，其余接口省略这两个字段。
+
+### 7.3 头像上传
+- `POST /me/avatar`（需登录）— 上传头像
+
+**请求**：`multipart/form-data`，字段名固定为 `file`（单张图片，最大 5MB）。
+
+**响应 data**：
+
+```json
+{ "url": "http://host/static/avatars/avatar-xxx.png" }
+```
+
+> 头像文件存到后端 `server/static/avatars/`，前端用返回的 `url` 直接显示（通过 `/static/avatars/...` 访问）。
+
 ---
 
 ## 八、附件 Attachments（帖子附件）

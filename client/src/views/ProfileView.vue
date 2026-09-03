@@ -27,6 +27,9 @@ const uploadingAvatar = ref(false)
 const editForm = reactive({ nickname: '', bio: '', avatarUrl: '' })
 const fileInput = ref(null)
 
+// 头像全图预览
+const avatarPreviewVisible = ref(false)
+
 // 页签名 → 对应的接口函数
 const fetchers = {
   posts: getMyPosts,
@@ -150,6 +153,15 @@ async function handleFileChange(e) {
   }
 }
 
+// 点击头像 → 查看全图（仅当已设置头像）
+function openAvatarPreview() {
+  if (!user.value?.avatarUrl) return
+  avatarPreviewVisible.value = true
+}
+function closeAvatarPreview() {
+  avatarPreviewVisible.value = false
+}
+
 onMounted(() => {
   loadList()
   loadMe()
@@ -171,7 +183,12 @@ onMounted(() => {
         </el-dropdown>
       </div>
       <div class="info__avatar">
-        <el-avatar :size="88" :src="user?.avatarUrl">
+        <el-avatar
+          :size="88"
+          :src="user?.avatarUrl"
+          class="profile-avatar"
+          @click="openAvatarPreview"
+        >
           {{ user?.nickname?.charAt(0) || 'U' }}
         </el-avatar>
       </div>
@@ -270,6 +287,13 @@ onMounted(() => {
         <el-button type="primary" :loading="saving" @click="saveProfile">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 头像全图查看（点击任意处退出） -->
+    <transition name="avatar-fade">
+      <div v-if="avatarPreviewVisible" class="avatar-viewer" @click="closeAvatarPreview">
+        <img :src="user?.avatarUrl" class="avatar-viewer__img" alt="头像大图" />
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -290,6 +314,40 @@ onMounted(() => {
 .info__avatar {
   display: flex;
   justify-content: center;
+}
+
+/* 头像：悬停放大 + 点击查看全图 */
+.profile-avatar {
+  transition: transform 0.2s ease;
+}
+.profile-avatar:hover {
+  transform: scale(1.08);
+}
+
+/* 全图查看遮罩：点击任意处退出 */
+.avatar-viewer {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  cursor: zoom-out;
+}
+.avatar-viewer__img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.avatar-fade-enter-active,
+.avatar-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.avatar-fade-enter-from,
+.avatar-fade-leave-to {
+  opacity: 0;
 }
 
 .info__nickname {
