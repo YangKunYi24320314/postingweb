@@ -1,28 +1,56 @@
-// 帖子相关接口：每个功能模块一个文件，这里只放帖子的。
-// 使用方式示例：const data = await getPostList({ page: 1, pageSize: 10 })
 import request from './request'
 
 // 帖子列表（支持分页、分类/标签/关键词筛选、rank 组合排序）
 export function getPostList(params) {
-  return request.get('/posts', { params })
+  return request({
+    url: '/posts',
+    method: 'get',
+    params
+  })
 }
 
-// 帖子详情
+// 获取单条帖子
 export function getPostById(id) {
-  return request.get(`/posts/${id}`)
+  return request({
+    url: `/posts/${id}`,
+    method: 'get'
+  })
 }
 
-// 发布帖子（需登录）：{ title, content, categoryId, tags }
+// 新增帖子
 export function createPost(data) {
-  return request.post('/posts', data)
+  return request({
+    url: '/posts',
+    method: 'post',
+    data
+  })
 }
 
-// 编辑帖子（需登录，仅作者）
+// 修改帖子
 export function updatePost(id, data) {
-  return request.put(`/posts/${id}`, data)
+  return request({
+    url: `/posts/${id}`,
+    method: 'put',
+    data
+  })
 }
 
-// 删除帖子（软删除，需登录，仅作者或管理员）
+// 删除帖子（逻辑删除）
 export function deletePost(id) {
-  return request.delete(`/posts/${id}`)
+  return request({
+    url: `/posts/${id}`,
+    method: 'delete'
+  })
+}
+
+// 上传文件接口
+export function uploadAttachment(formData) {
+  return request({
+    url: '/attachments/upload',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
 }

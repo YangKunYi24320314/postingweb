@@ -3,15 +3,14 @@
 -- 1. 先创建数据库：CREATE DATABASE campushub;
 -- 2. 连接到该数据库后，再运行本文件。
 -- 注意：本脚本会 DROP 已有同名表，适合开发初期初始化使用。
-
 BEGIN;
-
 DROP TABLE IF EXISTS user_tag_preferences CASCADE;
 DROP TABLE IF EXISTS comment_likes CASCADE;
 DROP TABLE IF EXISTS histories CASCADE;
 DROP TABLE IF EXISTS favorites CASCADE;
 DROP TABLE IF EXISTS post_likes CASCADE;
 DROP TABLE IF EXISTS comments CASCADE;
+DROP TABLE IF EXISTS post_attachments CASCADE;
 DROP TABLE IF EXISTS post_tags CASCADE;
 DROP TABLE IF EXISTS tags CASCADE;
 DROP TABLE IF EXISTS posts CASCADE;
@@ -30,7 +29,6 @@ CREATE TABLE users (
   status SMALLINT NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
   CONSTRAINT users_role_check CHECK (role IN ('user', 'admin')),
   CONSTRAINT users_status_check CHECK (status IN (0, 1))
 );
@@ -59,7 +57,6 @@ CREATE TABLE posts (
   status SMALLINT NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
   CONSTRAINT posts_status_check CHECK (status IN (0, 1, 2)),
   CONSTRAINT posts_count_check CHECK (
     view_count >= 0
@@ -80,8 +77,20 @@ CREATE TABLE post_tags (
   post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
   tag_id BIGINT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
   PRIMARY KEY (post_id, tag_id)
+);
+
+-- ========== 新增：帖子附件表 ==========
+CREATE TABLE post_attachments (
+  id BIGSERIAL PRIMARY KEY,
+  post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,
+  original_filename VARCHAR(255) NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  file_size BIGINT NOT NULL,
+  mime_type VARCHAR(100) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- 约束：文件大小非负
+  CONSTRAINT post_attachments_size_check CHECK (file_size >= 0)
 );
 
 CREATE TABLE comments (
@@ -94,7 +103,6 @@ CREATE TABLE comments (
   status SMALLINT NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
   CONSTRAINT comments_status_check CHECK (status IN (0, 1)),
   CONSTRAINT comments_like_count_check CHECK (like_count >= 0)
 );
@@ -104,7 +112,6 @@ CREATE TABLE post_likes (
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
   CONSTRAINT post_likes_user_post_unique UNIQUE (user_id, post_id)
 );
 
@@ -113,7 +120,6 @@ CREATE TABLE comment_likes (
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   comment_id BIGINT NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
   CONSTRAINT comment_likes_user_comment_unique UNIQUE (user_id, comment_id)
 );
 
@@ -122,7 +128,6 @@ CREATE TABLE favorites (
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
   CONSTRAINT favorites_user_post_unique UNIQUE (user_id, post_id)
 );
 
@@ -133,7 +138,6 @@ CREATE TABLE histories (
   viewed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
   CONSTRAINT histories_user_post_unique UNIQUE (user_id, post_id)
 );
 
@@ -142,28 +146,29 @@ CREATE TABLE user_tag_preferences (
   tag_id BIGINT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
   weight INT NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
   PRIMARY KEY (user_id, tag_id),
   CONSTRAINT user_tag_preferences_weight_check CHECK (weight >= 0)
 );
 
+-- 性能索引
 CREATE INDEX idx_posts_user_id ON posts(user_id);
 CREATE INDEX idx_posts_category_id ON posts(category_id);
 CREATE INDEX idx_posts_created_at ON posts(created_at DESC);
 CREATE INDEX idx_posts_hot ON posts(like_count DESC, comment_count DESC, favorite_count DESC, created_at DESC);
 CREATE INDEX idx_posts_not_deleted ON posts(is_deleted, status);
-
+CREATE INDEX idx_post_tags_tag_id ON post_tags(tag_id);
+-- 附件表索引
+CREATE INDEX idx_post_attachments_post_id ON post_attachments(post_id);
 CREATE INDEX idx_comments_post_id ON comments(post_id);
 CREATE INDEX idx_comments_user_id ON comments(user_id);
 CREATE INDEX idx_comments_parent_id ON comments(parent_id);
 CREATE INDEX idx_comments_created_at ON comments(created_at);
-
 CREATE INDEX idx_post_likes_post_id ON post_likes(post_id);
 CREATE INDEX idx_comment_likes_comment_id ON comment_likes(comment_id);
 CREATE INDEX idx_favorites_post_id ON favorites(post_id);
 CREATE INDEX idx_histories_user_viewed_at ON histories(user_id, viewed_at DESC);
-CREATE INDEX idx_post_tags_tag_id ON post_tags(tag_id);
 
+-- 初始化默认分类
 INSERT INTO categories (name, description, sort_order) VALUES
   ('课程学业', '课程讨论、选课建议、复习资料、考试经验', 10),
   ('校园生活', '食堂、宿舍、校园服务、日常见闻', 20),
@@ -174,6 +179,7 @@ INSERT INTO categories (name, description, sort_order) VALUES
   ('校园资讯', '校内通知、讲座比赛、实用信息汇总', 70),
   ('经验分享', '学习规划、实习就业、竞赛项目等经验沉淀', 80);
 
+-- 初始化默认标签
 INSERT INTO tags (name) VALUES
   ('考研'),
   ('自习室'),
