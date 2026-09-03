@@ -2,10 +2,10 @@
 // 帖子详情页：展示帖子全文 + 评论区（发表/回复/编辑/删除/点赞）。
 // 后端接口见 devdocs/api-protocol.md（帖子详情 / 评论 / 点赞 / 上报浏览）。
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Pointer } from '@element-plus/icons-vue'
-import { getPostById } from '../api/post'
+import { getPostById, deletePost } from '../api/post'
 import { getComments, createComment } from '../api/comments'
 import { reportView } from '../api/record'
 import { getMe } from '../api/auth'
@@ -14,18 +14,26 @@ import InteractionButtons from '../components/InteractionButtons.vue'
 import CommentItem from '../components/CommentItem.vue'
 
 const route = useRoute()
+const router = useRouter()
 // 从路由参数取出帖子 id（如 /post/3 -> 3）
 const postId = computed(() => Number(route.params.id))
-
 const post = ref(null)
 const comments = ref([])
 const myUserId = ref(null)
+const myUserRole = ref(null)
 const loading = ref(false)
 const commentsLoading = ref(false)
-
 // 顶级评论输入框
 const newContent = ref('')
 const submitting = ref(false)
+
+// 权限判断：仅帖子作者 或 管理员 可删除
+const isCanDelete = computed(() => {
+  if (!post.value || !myUserId.value) return false
+  const isAuthor = myUserId.value === post.value.user?.id
+  const isAdmin = myUserRole.value === 'admin'
+  return isAuthor || isAdmin
+})
 
 // 格式化时间：ISO → "2026-09-01 08:54"
 function formatTime(iso) {
@@ -87,13 +95,41 @@ async function loadComments() {
 async function loadMe() {
   if (!getToken()) {
     myUserId.value = null
+    myUserRole.value = null
     return
   }
   try {
     const me = await getMe()
     myUserId.value = me.id
+    myUserRole.value = me.role
   } catch {
     myUserId.value = null
+    myUserRole.value = null
+  }
+}
+
+// 删除帖子
+async function handleDelete() {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除该帖子吗？删除后无法恢复。',
+      '删除确认',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    await deletePost(postId.value)
+    
+    ElMessage.success('帖子删除成功')
+    router.push('/post-page')
+  } catch (err) {
+    // 点击取消不做提示
+    if (err !== 'cancel') {
+      ElMessage.error(err.message || '删除失败，请重试')
+    }
   }
 }
 
@@ -145,19 +181,24 @@ onMounted(async () => {
         <div class="detail-card__head">
           <h2 class="detail-card__title">{{ post.title }}</h2>
           <span v-if="post.isPinned" class="detail-card__pin">置顶</span>
+          <el-button
+            v-if="isCanDelete"
+            type="danger"
+            size="small"
+            plain
+            @click="handleDelete"
+          >
+            删除帖子
+          </el-button>
         </div>
-
         <div class="detail-card__meta">
           <span class="detail-card__author">{{ post.user?.nickname || '匿名用户' }}</span>
           <span class="detail-card__time">{{ formatTime(post.createdAt) }}</span>
         </div>
-
         <div v-if="post.tags && post.tags.length" class="detail-card__tags">
           <el-tag v-for="tag in post.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
         </div>
-
         <div class="detail-card__content">{{ post.content }}</div>
-
         <div class="detail-card__stats">
           <span
             ><el-icon><Pointer /></el-icon> 浏览 {{ post.viewCount }}</span
@@ -172,11 +213,9 @@ onMounted(async () => {
         </div>
       </template>
     </el-card>
-
     <!-- 评论区 -->
     <el-card shadow="never" class="comment-card">
       <h3 class="comment-card__title">评论 ({{ post?.commentCount || 0 }})</h3>
-
       <!-- 发表评论 -->
       <div class="comment-card__input">
         <el-input
@@ -191,7 +230,6 @@ onMounted(async () => {
           >
         </div>
       </div>
-
       <!-- 评论列表 -->
       <div v-loading="commentsLoading" class="comment-card__list">
         <el-empty
@@ -216,18 +254,16 @@ onMounted(async () => {
   padding: var(--space-lg);
   margin-bottom: var(--space-md);
 }
-
 .detail-card__head {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
 }
-
 .detail-card__title {
   font-size: 22px;
   color: var(--text-primary);
+  margin: 0;
 }
-
 .detail-card__pin {
   flex-shrink: 0;
   font-size: 12px;
@@ -236,7 +272,6 @@ onMounted(async () => {
   border-radius: var(--radius-sm);
   padding: 0 var(--space-xs);
 }
-
 .detail-card__meta {
   display: flex;
   gap: var(--space-md);
@@ -244,14 +279,12 @@ onMounted(async () => {
   color: var(--text-secondary);
   font-size: 13px;
 }
-
 .detail-card__tags {
   display: flex;
   gap: var(--space-xs);
   margin-top: var(--space-sm);
   flex-wrap: wrap;
 }
-
 .detail-card__content {
   margin-top: var(--space-md);
   color: var(--text-regular);
@@ -259,7 +292,6 @@ onMounted(async () => {
   word-break: break-word;
   line-height: 1.8;
 }
-
 .detail-card__stats {
   display: flex;
   align-items: center;
@@ -270,7 +302,6 @@ onMounted(async () => {
   border-top: 1px solid var(--border-color-light);
   flex-wrap: wrap;
 }
-
 .detail-card__stats > span {
   display: inline-flex;
   align-items: center;
@@ -278,27 +309,22 @@ onMounted(async () => {
   color: var(--text-secondary);
   font-size: 13px;
 }
-
 .comment-card {
   padding: var(--space-lg);
 }
-
 .comment-card__title {
   font-size: 17px;
   color: var(--text-primary);
   margin-bottom: var(--space-md);
 }
-
 .comment-card__input {
   margin-bottom: var(--space-lg);
 }
-
 .comment-card__input-actions {
   display: flex;
   justify-content: flex-end;
   margin-top: var(--space-sm);
 }
-
 .comment-card__list {
   display: flex;
   flex-direction: column;
