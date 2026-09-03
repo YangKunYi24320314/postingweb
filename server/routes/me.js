@@ -16,6 +16,9 @@ function toPostItem(row) {
     id: row.id,
     title: row.title,
     categoryId: row.category_id,
+    categoryName: row.category_name || null, // 分类名（LEFT JOIN categories）
+    content: row.content, // 正文（前端悬浮预览用）
+    tags: row.tags || [], // 标签数组（批量查好后塞进来）
     author: { id: row.user_id, nickname: row.nickname },
     viewCount: row.view_count,
     likeCount: row.like_count,
@@ -35,6 +38,25 @@ function parsePage(query) {
   return { page, pageSize, offset: (page - 1) * pageSize }
 }
 
+// 批量查一组帖子 id 的标签，返回 { postId: [tagName, ...] }（和 posts.js 一致）
+async function getTagsByPostIds(postIds) {
+  if (!postIds.length) return {}
+  const result = await pool.query(
+    `SELECT pt.post_id::int AS post_id, t.name
+     FROM post_tags pt
+     JOIN tags t ON t.id = pt.tag_id
+     WHERE pt.post_id = ANY($1::int[])
+     ORDER BY t.name`,
+    [postIds]
+  )
+  const map = {}
+  result.rows.forEach((row) => {
+    if (!map[row.post_id]) map[row.post_id] = []
+    map[row.post_id].push(row.name)
+  })
+  return map
+}
+
 // GET /api/me/posts —— 我发布的帖子（需登录，分页）
 router.get('/me/posts', auth, async (req, res) => {
   const { page, pageSize, offset } = parsePage(req.query)
@@ -46,18 +68,25 @@ router.get('/me/posts', auth, async (req, res) => {
   const total = count.rows[0].total
 
   const list = await pool.query(
-    `SELECT p.id::int, p.title, p.category_id::int, p.view_count, p.like_count,
-            p.favorite_count, p.comment_count, p.created_at,
-            u.id::int AS user_id, u.nickname
+    `SELECT p.id::int, p.title, p.content, p.category_id::int,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.created_at,
+            u.id::int AS user_id, u.nickname,
+            c.name AS category_name
      FROM posts p
      JOIN users u ON u.id = p.user_id
+     LEFT JOIN categories c ON c.id = p.category_id
      WHERE p.user_id = $1 AND p.is_deleted = false
      ORDER BY p.created_at DESC
      LIMIT $2 OFFSET $3`,
     [req.userId, pageSize, offset]
   )
 
-  return ok(res, { list: list.rows.map(toPostItem), total, page, pageSize })
+  const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))
+  const mapped = list.rows.map((row) => {
+    row.tags = tagsMap[row.id] || []
+    return toPostItem(row)
+  })
+  return ok(res, { list: mapped, total, page, pageSize })
 })
 
 // GET /api/me/favorites —— 我收藏的帖子（需登录，分页）
@@ -74,20 +103,27 @@ router.get('/me/favorites', auth, async (req, res) => {
   const total = count.rows[0].total
 
   const list = await pool.query(
-    `SELECT p.id::int, p.title, p.category_id::int, p.view_count, p.like_count,
-            p.favorite_count, p.comment_count, p.created_at,
+    `SELECT p.id::int, p.title, p.content, p.category_id::int,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.created_at,
             u.id::int AS user_id, u.nickname,
+            c.name AS category_name,
             f.created_at AS favorited_at
      FROM favorites f
      JOIN posts p ON p.id = f.post_id
      JOIN users u ON u.id = p.user_id
+     LEFT JOIN categories c ON c.id = p.category_id
      WHERE f.user_id = $1 AND p.is_deleted = false
      ORDER BY f.created_at DESC
      LIMIT $2 OFFSET $3`,
     [req.userId, pageSize, offset]
   )
 
-  return ok(res, { list: list.rows.map(toPostItem), total, page, pageSize })
+  const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))
+  const mapped = list.rows.map((row) => {
+    row.tags = tagsMap[row.id] || []
+    return toPostItem(row)
+  })
+  return ok(res, { list: mapped, total, page, pageSize })
 })
 
 // GET /api/me/likes —— 我点赞的帖子（需登录，分页）
@@ -104,20 +140,27 @@ router.get('/me/likes', auth, async (req, res) => {
   const total = count.rows[0].total
 
   const list = await pool.query(
-    `SELECT p.id::int, p.title, p.category_id::int, p.view_count, p.like_count,
-            p.favorite_count, p.comment_count, p.created_at,
+    `SELECT p.id::int, p.title, p.content, p.category_id::int,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.created_at,
             u.id::int AS user_id, u.nickname,
+            c.name AS category_name,
             pl.created_at AS liked_at
      FROM post_likes pl
      JOIN posts p ON p.id = pl.post_id
      JOIN users u ON u.id = p.user_id
+     LEFT JOIN categories c ON c.id = p.category_id
      WHERE pl.user_id = $1 AND p.is_deleted = false
      ORDER BY pl.created_at DESC
      LIMIT $2 OFFSET $3`,
     [req.userId, pageSize, offset]
   )
 
-  return ok(res, { list: list.rows.map(toPostItem), total, page, pageSize })
+  const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))
+  const mapped = list.rows.map((row) => {
+    row.tags = tagsMap[row.id] || []
+    return toPostItem(row)
+  })
+  return ok(res, { list: mapped, total, page, pageSize })
 })
 
 // ---------- 头像上传（个人中心用） ----------

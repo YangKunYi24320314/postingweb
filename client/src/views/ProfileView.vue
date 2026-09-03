@@ -2,7 +2,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { MoreFilled, Edit } from '@element-plus/icons-vue'
+import { MoreFilled, Edit, View, ChatDotRound, Pointer } from '@element-plus/icons-vue'
 import { getMe, updateProfile } from '../api/auth'
 import { getMyPosts, getMyFavorites, getMyLikes, uploadAvatar } from '../api/record'
 import RecentHistoryPreview from '../components/RecentHistoryPreview.vue'
@@ -68,6 +68,16 @@ function formatTime(iso) {
   const d = new Date(iso)
   const pad = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// 悬浮预览正文：删除空行后返回剩余文本；视觉上的 3 行限制与省略交给 CSS line-clamp
+function contentPreview(content) {
+  if (!content) return ''
+  return content
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .join('\n')
 }
 
 // 加载当前用户信息
@@ -171,7 +181,7 @@ onMounted(() => {
     </el-card>
 
     <!-- 我的内容（三个页签） -->
-    <el-card shadow="never">
+    <el-card v-loading="loading" shadow="never">
       <h2 class="profile__title">个人主页</h2>
 
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
@@ -180,18 +190,37 @@ onMounted(() => {
         <el-tab-pane label="我点赞的" name="likes" />
       </el-tabs>
 
-      <el-table v-loading="loading" :data="list" empty-text="暂无内容" @row-click="goPost">
-        <el-table-column prop="title" label="帖子标题" min-width="200" />
-        <el-table-column label="作者" width="140">
-          <template #default="{ row }">{{ row.author?.nickname || '匿名用户' }}</template>
-        </el-table-column>
-        <el-table-column prop="viewCount" label="浏览" width="80" />
-        <el-table-column prop="likeCount" label="点赞" width="80" />
-        <el-table-column prop="commentCount" label="评论" width="80" />
-        <el-table-column label="发布时间" width="170">
-          <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
-        </el-table-column>
-      </el-table>
+      <el-empty v-if="!loading && list.length === 0" description="暂无内容" />
+      <div v-for="row in list" :key="row.id" class="profile-post-card" @click="goPost(row)">
+        <div class="profile-post-card__head">
+          <h3 class="profile-post-card__title">{{ row.title }}</h3>
+          <span class="profile-post-card__category">{{ row.categoryName || '未分类' }}</span>
+        </div>
+        <div class="profile-post-card__meta">
+          <span class="profile-post-card__author">{{ row.author?.nickname || '匿名用户' }}</span>
+          <span class="profile-post-card__time">{{ formatTime(row.createdAt) }}</span>
+        </div>
+        <div v-if="row.tags && row.tags.length" class="profile-post-card__tags">
+          <el-tag
+            v-for="tag in row.tags"
+            :key="tag"
+            class="profile-post-card__tag"
+            size="small"
+            effect="plain"
+          >
+            {{ tag }}
+          </el-tag>
+        </div>
+        <!-- 悬浮展开的正文预览（前 3 个含文字的非空行） -->
+        <div v-if="contentPreview(row.content)" class="profile-post-card__preview">
+          {{ contentPreview(row.content) }}
+        </div>
+        <div class="profile-post-card__stats">
+          <span><el-icon><View /></el-icon> {{ row.viewCount }}</span>
+          <span><el-icon><ChatDotRound /></el-icon> {{ row.commentCount }}</span>
+          <span><el-icon><Pointer /></el-icon> {{ row.likeCount }}</span>
+        </div>
+      </div>
 
       <el-pagination
         v-model:current-page="page"
@@ -282,8 +311,78 @@ onMounted(() => {
   color: var(--text-regular);
 }
 
-:deep(.el-table__row) {
+/* 个人主页帖子卡片（对齐帖子广场的 post-card 样式） */
+.profile-post-card {
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--border-color-light);
   cursor: pointer;
+}
+.profile-post-card:last-child {
+  border-bottom: none;
+}
+.profile-post-card:hover .profile-post-card__title {
+  color: var(--brand-primary);
+}
+.profile-post-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+.profile-post-card__title {
+  font-size: 17px;
+  color: var(--text-primary);
+  margin: 0;
+  transition: color 0.2s ease;
+}
+.profile-post-card__category {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.profile-post-card__meta {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-xs);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.profile-post-card__tags {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+  flex-wrap: wrap;
+}
+.profile-post-card__stats {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.profile-post-card__stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+/* 悬浮展开正文预览：默认收起，hover 展开；视觉 3 行，超出省略 */
+.profile-post-card__preview {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  white-space: pre-line;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+  transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease;
+}
+.profile-post-card:hover .profile-post-card__preview {
+  max-height: 140px;
+  opacity: 1;
+  margin-top: var(--space-sm);
 }
 
 .profile__title {
