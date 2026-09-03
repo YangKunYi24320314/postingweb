@@ -12,6 +12,10 @@ const pool = require('../db')
 const { ok, fail, CODE } = require('../utils/response')
 const { auth } = require('../middleware/auth')
 const { validateCredentials } = require('../utils/auth-validation')
+const { createSmsProvider } = require('../services/sms-provider')
+const { createEmailProvider } = require('../services/email-provider')
+const { createVerificationService } = require('../services/verification-service')
+const { createContactAuthService } = require('../services/contact-auth')
 const { findPublicUser, parsePublicUserId } = require('../services/public-user')
 const { toUser } = require('../utils/user-profile')
 const {
@@ -37,6 +41,69 @@ const avatarUpload = multer({
     callback(null, true)
   },
 })
+
+let contactAuthService
+
+function unavailableProvider(error) {
+  return {
+    async sendCode() {
+      throw error
+    },
+  }
+}
+
+function getContactAuthService() {
+  if (contactAuthService) return contactAuthService
+
+  let smsProvider
+  let emailProvider
+  try {
+    smsProvider = createSmsProvider()
+  } catch (error) {
+    smsProvider = unavailableProvider(error)
+  }
+  try {
+    emailProvider = createEmailProvider()
+  } catch (error) {
+    emailProvider = unavailableProvider(error)
+  }
+
+  const verificationService = createVerificationService({
+    pool,
+    providers: { phone: smsProvider, email: emailProvider },
+  })
+  contactAuthService = createContactAuthService({
+    pool,
+    verificationService,
+    signToken,
+  })
+  return contactAuthService
+}
+
+function handleAuthError(res, error) {
+  if (error.code === 'AUTH_VALIDATION' || error.code === 'CONTACT_VALIDATION') {
+    return fail(res, CODE.PARAM_ERROR, error.message)
+  }
+  if (error.code === 'AUTH_LOGIN_FAILED') {
+    return fail(res, CODE.UNAUTHORIZED, error.message, 401)
+  }
+  if (error.code === 'AUTH_PASSWORD_INVALID') {
+    return fail(res, CODE.PARAM_ERROR, error.message)
+  }
+  if (error.code === 'AUTH_USER_NOT_FOUND') {
+    return fail(res, CODE.NOT_FOUND, error.message, 404)
+  }
+  if (error.code === 'CONTACT_CONFLICT') {
+    return fail(res, CODE.CONFLICT, error.message, 409)
+  }
+  if (error.code === 'VERIFICATION_INVALID' || error.code === 'VERIFICATION_COOLDOWN') {
+    return fail(res, CODE.PARAM_ERROR, error.message)
+  }
+  if (error.code === 'CONTACT_PROVIDER') {
+    return fail(res, CODE.SERVER_ERROR, error.message, 500)
+  }
+  throw error
+}
 
 // 生成登录令牌（默认 7 天有效）
 function signToken(userId) {
@@ -80,35 +147,22 @@ router.post('/auth/register', async (req, res) => {
 
 // POST /api/auth/login —— 登录
 router.post('/auth/login', async (req, res) => {
-  const { username, password } = req.body || {}
-  let credentials
+  const { identifier, username, password } = req.body || {}
   try {
-    credentials = validateCredentials(username, password)
+    const data = await getContactAuthService().login({
+      identifier: identifier ?? username,
+      password,
+    })
+    return ok(res, data)
   } catch (error) {
-    if (error.code === 'AUTH_VALIDATION') {
-      return fail(res, CODE.PARAM_ERROR, error.message)
-    }
-    throw error
+    return handleAuthError(res, error)
   }
-
-  const result = await pool.query('SELECT * FROM users WHERE username = $1', [credentials.username])
-  if (result.rowCount === 0) {
-    return fail(res, CODE.UNAUTHORIZED, '用户名或密码错误', 401)
-  }
-
-  const user = result.rows[0]
-  const match = await bcrypt.compare(credentials.password, user.password_hash)
-  if (!match) {
-    return fail(res, CODE.UNAUTHORIZED, '用户名或密码错误', 401)
-  }
-
-  return ok(res, { token: signToken(user.id), user: toUser(user) })
 })
 
 // GET /api/auth/me —— 获取当前登录用户（需登录）
 router.get('/auth/me', auth, async (req, res) => {
   const result = await pool.query(
-    'SELECT id, username, avatar_url, bio, role FROM users WHERE id = $1 AND status = 1',
+    'SELECT id, username, avatar_url, bio, role, phone, email FROM users WHERE id = $1 AND status = 1',
     [req.userId]
   )
   if (result.rowCount === 0) {
@@ -127,7 +181,7 @@ router.put('/auth/profile', auth, async (req, res) => {
      SET bio = COALESCE($1, bio),
          avatar_url = COALESCE($2, avatar_url)
      WHERE id = $3
-     RETURNING id, username, avatar_url, bio, role`,
+     RETURNING id, username, avatar_url, bio, role, phone, email`,
     [bio || null, avatarUrl || null, req.userId]
   )
 
@@ -135,6 +189,77 @@ router.put('/auth/profile', auth, async (req, res) => {
     return fail(res, CODE.NOT_FOUND, '用户不存在', 404)
   }
   return ok(res, toUser(result.rows[0]))
+})
+
+// POST /api/auth/contact/send-code —— 发送绑定验证码（需登录）
+router.post('/auth/contact/send-code', auth, async (req, res) => {
+  try {
+    const data = await getContactAuthService().sendBindingCode({
+      userId: req.userId,
+      channel: req.body?.channel,
+      target: req.body?.target,
+    })
+    return ok(res, data, '验证码已发送')
+  } catch (error) {
+    return handleAuthError(res, error)
+  }
+})
+
+// POST /api/auth/contact/bind —— 校验验证码并绑定联系方式（需登录）
+router.post('/auth/contact/bind', auth, async (req, res) => {
+  try {
+    const data = await getContactAuthService().bindContact({
+      userId: req.userId,
+      channel: req.body?.channel,
+      target: req.body?.target,
+      code: req.body?.code,
+    })
+    return ok(res, data, '联系方式绑定成功')
+  } catch (error) {
+    return handleAuthError(res, error)
+  }
+})
+
+// POST /api/auth/password/change —— 修改密码（需登录）
+router.post('/auth/password/change', auth, async (req, res) => {
+  try {
+    const data = await getContactAuthService().changePassword({
+      userId: req.userId,
+      currentPassword: req.body?.currentPassword,
+      newPassword: req.body?.newPassword,
+    })
+    return ok(res, data, '密码修改成功')
+  } catch (error) {
+    return handleAuthError(res, error)
+  }
+})
+
+// POST /api/auth/password/reset/send-code —— 发送找回密码验证码（无需登录）
+router.post('/auth/password/reset/send-code', async (req, res) => {
+  try {
+    const data = await getContactAuthService().sendResetCode({
+      channel: req.body?.channel,
+      target: req.body?.target,
+    })
+    return ok(res, data, '如果账号存在，验证码将发送到对应联系方式')
+  } catch (error) {
+    return handleAuthError(res, error)
+  }
+})
+
+// POST /api/auth/password/reset —— 使用验证码重置密码（无需登录）
+router.post('/auth/password/reset', async (req, res) => {
+  try {
+    const data = await getContactAuthService().resetPassword({
+      channel: req.body?.channel,
+      target: req.body?.target,
+      code: req.body?.code,
+      newPassword: req.body?.newPassword,
+    })
+    return ok(res, data, '密码重置成功')
+  } catch (error) {
+    return handleAuthError(res, error)
+  }
 })
 
 // POST /api/auth/avatar —— 上传当前用户头像（需登录）
@@ -161,7 +286,7 @@ router.post('/auth/avatar', auth, (req, res, next) => {
     `UPDATE users
         SET avatar_url = $1
       WHERE id = $2 AND status = 1
-      RETURNING id, username, avatar_url, bio, role`,
+      RETURNING id, username, avatar_url, bio, role, phone, email`,
     [avatarUrl, req.userId]
   )
 
@@ -188,3 +313,4 @@ router.get('/users/:id', async (req, res) => {
 })
 
 module.exports = router
+module.exports.handleAuthError = handleAuthError

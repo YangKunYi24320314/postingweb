@@ -35,10 +35,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [identifier, password]
+              required: [username, password]
               properties:
-                identifier: { type: string, example: scu123 }
-                username: { type: string, description: 兼容旧客户端, deprecated: true }
+                username: { type: string, example: scu123 }
                 password: { type: string, example: "123456" }
                 nickname: { type: string, example: 东门猛男 }
       responses:
@@ -64,9 +63,10 @@ paths:
           application/json:
             schema:
               type: object
-              required: [username, password]
+              required: [identifier, password]
               properties:
-                username: { type: string, example: scu123 }
+                identifier: { type: string, example: scu123 }
+                username: { type: string, description: 兼容旧客户端, deprecated: true }
                 password: { type: string, example: "123456" }
       responses:
         '200':

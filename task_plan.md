@@ -7,9 +7,9 @@
 - [x] 完成账号绑定与密码安全设计、实施计划和安全检查点
 - [x] 完成联系方式校验、验证码工具与数据库契约
 - [x] 完成真实短信/邮件 provider 与验证码服务
-- [ ] 完成绑定、登录、修改密码、找回密码后端接口
-- [ ] 完成登录页和个人中心账号安全前端
-- [ ] 运行全量测试、lint、build 并提交到 `feature/login`
+- [x] 完成绑定、登录、修改密码、找回密码后端接口
+- [x] 完成登录页和个人中心账号安全前端
+- [x] 运行全量测试、lint、build 并创建本地提交，等待你审阅后再上传
 
 ## 约束
 - 接口字段优先遵循仓库现有 `devdocs/api-protocol.md`、`devdocs/openapi.yaml`；若与 Apifox 不一致，以用户提供的 Apifox 为准。
@@ -26,10 +26,11 @@
 | 2026-09-03 | 整体合并 `origin/develop` 会重新引入帖子、互动、分类标签路由 | 中止整体合并，仅 cherry-pick 契约文档更新 `54ee4c6` |
 | 2026-09-03 | 旧计划引用 `server/.env copy.example` 不存在 | 按仓库实际文件 `server/.env.example` 更新配置模板 |
 | 2026-09-03 | provider 首次批量补丁因环境模板内容差异未应用 | 分块应用 provider 和环境模板改动，未丢失代码 |
+| 2026-09-03 | OpenAPI 首次修改误命中注册接口的 required 字段 | 复核并恢复注册为 `username`，仅登录使用 `identifier` |
 
 ## Next Step
 
-先为 provider 注入、发送冷却和旧验证码失效编写失败测试。
+运行后端/前端全量测试、lint 和 build，并检查差异中没有真实凭据。
 
 
 

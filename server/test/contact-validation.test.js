@@ -6,6 +6,7 @@ const {
   validateContact,
   validatePhone,
   validateEmail,
+  normalizeLoginIdentifier,
 } = require('../utils/contact-validation')
 
 test('phone contact accepts a mainland mobile number and strips whitespace', () => {
@@ -25,4 +26,16 @@ test('contact validator normalizes targets by channel', () => {
 test('contact validators reject malformed phone and email targets', () => {
   assert.throws(() => validatePhone('12345678901'), /手机号格式不正确/)
   assert.throws(() => validateEmail('not-an-email'), /邮箱格式不正确/)
+})
+
+test('login identifier normalizes username, phone, and email values', () => {
+  assert.deepEqual(normalizeLoginIdentifier('  scu123 '), { type: 'username', value: 'scu123' })
+  assert.deepEqual(normalizeLoginIdentifier(' 13800138000 '), {
+    type: 'phone',
+    value: '13800138000',
+  })
+  assert.deepEqual(normalizeLoginIdentifier(' USER@example.com '), {
+    type: 'email',
+    value: 'user@example.com',
+  })
 })
