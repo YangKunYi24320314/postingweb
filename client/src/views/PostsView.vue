@@ -17,8 +17,9 @@ const loading = ref(false)
 const categories = ref([]) // 分类下拉数据
 const filters = ref({
   categoryId: '',
+  tag: '',
   keyword: '',
-  sort: 'new', // new(最新) / hot(最热)
+  rank: ['latest'],
 })
 
 // 格式化时间：ISO → "2026-09-01 08:54"
@@ -44,8 +45,9 @@ async function loadList() {
       page: page.value,
       pageSize: pageSize.value,
       categoryId: filters.value.categoryId || undefined,
+      tag: filters.value.tag || undefined,
       keyword: filters.value.keyword || undefined,
-      sort: filters.value.sort,
+      rank: filters.value.rank.join(',') || 'latest',
     })
     list.value = data.list
     total.value = data.total
@@ -58,8 +60,28 @@ async function loadList() {
 
 // 切换分类/搜索/排序都回到第一页并重新加载
 function handleFilterChange() {
+  if (filters.value.rank.length === 0) {
+    filters.value.rank = ['latest']
+  }
   page.value = 1
   loadList()
+}
+
+function selectCategory(categoryId) {
+  filters.value.categoryId = filters.value.categoryId === categoryId ? '' : categoryId
+  handleFilterChange()
+}
+
+function searchByTag(tag) {
+  filters.value.tag = tag
+  filters.value.keyword = tag
+  handleFilterChange()
+}
+
+function clearSearch() {
+  filters.value.keyword = ''
+  filters.value.tag = ''
+  handleFilterChange()
 }
 
 // 翻页
@@ -80,30 +102,44 @@ onMounted(async () => {
 
 <template>
   <div class="page-container">
-    <!-- 顶部工具条：分类筛选 + 关键词搜索 + 排序切换 -->
+    <!-- 顶部工具条：分类筛选 + 关键词搜索 + 组合排序 -->
     <div class="filter-bar">
-      <el-select
-        v-model="filters.categoryId"
-        placeholder="全部分类"
-        clearable
-        class="filter-bar__category"
-        @change="handleFilterChange"
-      >
-        <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
-      </el-select>
+      <div class="category-strip">
+        <el-button
+          :type="filters.categoryId === '' ? 'primary' : 'default'"
+          round
+          @click="selectCategory('')"
+        >
+          全部
+        </el-button>
+        <el-button
+          v-for="c in categories"
+          :key="c.id"
+          :type="filters.categoryId === c.id ? 'primary' : 'default'"
+          round
+          @click="selectCategory(c.id)"
+        >
+          {{ c.name }}
+        </el-button>
+      </div>
       <el-input
         v-model="filters.keyword"
-        placeholder="搜索标题或正文"
+        placeholder="搜索标题、正文或点击标签搜索"
         clearable
         class="filter-bar__search"
         :prefix-icon="Search"
         @keyup.enter="handleFilterChange"
-        @clear="handleFilterChange"
+        @clear="clearSearch"
       />
-      <el-radio-group v-model="filters.sort" class="filter-bar__sort" @change="handleFilterChange">
-        <el-radio-button value="new">最新</el-radio-button>
-        <el-radio-button value="hot">最热</el-radio-button>
-      </el-radio-group>
+      <el-checkbox-group
+        v-model="filters.rank"
+        class="filter-bar__rank"
+        @change="handleFilterChange"
+      >
+        <el-checkbox-button value="latest">最新</el-checkbox-button>
+        <el-checkbox-button value="hot">热门</el-checkbox-button>
+        <el-checkbox-button value="recommend">猜你喜欢</el-checkbox-button>
+      </el-checkbox-group>
     </div>
 
     <!-- 帖子列表 -->
@@ -123,7 +159,16 @@ onMounted(async () => {
         </div>
         <!-- 标签 -->
         <div v-if="item.tags && item.tags.length" class="post-card__tags">
-          <el-tag v-for="tag in item.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
+          <el-tag
+            v-for="tag in item.tags"
+            :key="tag"
+            class="post-card__tag"
+            size="small"
+            effect="plain"
+            @click="searchByTag(tag)"
+          >
+            {{ tag }}
+          </el-tag>
         </div>
         <!-- 数据 + 互动按钮 -->
         <div class="post-card__stats">
@@ -163,11 +208,22 @@ onMounted(async () => {
   margin-bottom: var(--space-md);
   flex-wrap: wrap;
 }
-.filter-bar__category {
-  width: 140px;
+.category-strip {
+  display: flex;
+  gap: var(--space-xs);
+  width: 100%;
+  flex-wrap: wrap;
+  padding-bottom: 2px;
 }
 .filter-bar__search {
-  max-width: 260px;
+  max-width: 320px;
+}
+.filter-bar__rank {
+  flex-shrink: 0;
+}
+.post-card__tag {
+  cursor: pointer;
+  user-select: none;
 }
 .post-list {
   padding: var(--space-md);
