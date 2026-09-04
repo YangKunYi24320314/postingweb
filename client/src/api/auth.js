@@ -6,6 +6,26 @@ export function login(data) {
   return request.post('/auth/login', data)
 }
 
+export function sendContactCode(data) {
+  return request.post('/auth/contact/send-code', data)
+}
+
+export function bindContact(data) {
+  return request.post('/auth/contact/bind', data)
+}
+
+export function changePassword(data) {
+  return request.post('/auth/password/change', data)
+}
+
+export function sendPasswordResetCode(data) {
+  return request.post('/auth/password/reset/send-code', data)
+}
+
+export function resetPassword(data) {
+  return request.post('/auth/password/reset', data)
+}
+
 export function register(data) {
   return request.post('/auth/register', data)
 }
@@ -16,4 +36,14 @@ export function getMe() {
 
 export function updateProfile(data) {
   return request.put('/auth/profile', data)
+}
+
+export function uploadAvatar(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/me/avatar', formData)
+}
+
+export function getPublicUser(id) {
+  return request.get(`/users/${id}`)
 }

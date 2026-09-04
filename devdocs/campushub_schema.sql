@@ -15,6 +15,7 @@ DROP TABLE IF EXISTS post_tags CASCADE;
 DROP TABLE IF EXISTS tags CASCADE;
 DROP TABLE IF EXISTS posts CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS verification_codes CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
 CREATE TABLE users (
@@ -25,14 +26,37 @@ CREATE TABLE users (
   avatar_url VARCHAR(500),
   background_url VARCHAR(500),
   email VARCHAR(100) UNIQUE,
+  phone VARCHAR(20) UNIQUE,
   bio VARCHAR(255),
   role VARCHAR(20) NOT NULL DEFAULT 'user',
   status SMALLINT NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT users_role_check CHECK (role IN ('user', 'admin')),
-  CONSTRAINT users_status_check CHECK (status IN (0, 1))
+  CONSTRAINT users_status_check CHECK (status IN (0, 1)),
+  CONSTRAINT users_phone_check CHECK (phone IS NULL OR phone ~ '^1[3-9][0-9]{9}$')
 );
+
+-- 绑定和找回密码都使用这里的一次性验证码；只保存验证码哈希，避免明文泄露。
+CREATE TABLE verification_codes (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  channel VARCHAR(10) NOT NULL,
+  target VARCHAR(100) NOT NULL,
+  purpose VARCHAR(30) NOT NULL,
+  code_hash VARCHAR(64) NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  attempts SMALLINT NOT NULL DEFAULT 0,
+  consumed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  CONSTRAINT verification_codes_channel_check CHECK (channel IN ('phone', 'email')),
+  CONSTRAINT verification_codes_purpose_check CHECK (purpose IN ('bind', 'password_reset')),
+  CONSTRAINT verification_codes_attempts_check CHECK (attempts >= 0 AND attempts <= 5)
+);
+
+CREATE INDEX verification_codes_lookup_idx
+  ON verification_codes (user_id, channel, target, purpose, created_at DESC);
 
 CREATE TABLE categories (
   id BIGSERIAL PRIMARY KEY,

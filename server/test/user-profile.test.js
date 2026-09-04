@@ -1,0 +1,25 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+
+const { toUser } = require('../utils/user-profile')
+
+test('toUser exposes username and nickname per the api protocol', () => {
+  assert.deepEqual(
+    toUser({
+      id: 12,
+      username: 'scu123',
+      nickname: '旧昵称',
+      avatar_url: null,
+      bio: '简介',
+      role: 'user',
+    }),
+    {
+      id: 12,
+      username: 'scu123',
+      nickname: '旧昵称',
+      avatarUrl: null,
+      bio: '简介',
+      role: 'user',
+    }
+  )
+})

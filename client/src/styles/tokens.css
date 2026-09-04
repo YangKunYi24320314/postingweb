@@ -34,6 +34,15 @@
   --bg-white: #ffffff;
   --bg-hover: #f9fafb;
 
+  /* ---------- 首页页脚 ---------- */
+  --footer-bg: #101733;
+  --footer-heading: #ffffff;
+  --footer-text: #c1cbe5;
+  --footer-muted: #8490b3;
+  --footer-border: rgba(193, 203, 229, 0.16);
+  --footer-link-hover: #ffffff;
+  --footer-focus: #8aa8ff;
+
   /* ---------- 间距节奏（倍数递增，别用 7px/13px 这种颗料） ---------- */
   --space-xs: 4px;
   --space-sm: 8px;

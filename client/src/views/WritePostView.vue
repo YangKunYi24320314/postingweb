@@ -18,6 +18,7 @@
           placeholder="写下你的内容..."
           class="input-item"
           />
+
           <!-- 分类选择（下拉单选） -->
           <el-select
               v-model="form.categoryId"
@@ -32,6 +33,7 @@
                   :value="cat.id"
               />
           </el-select>
+
           <!-- 标签选择（下拉多选、可搜索、可手动输入新标签） -->
           <el-select
               v-model="form.tags"
@@ -93,6 +95,7 @@ const loading = ref(false)
 const fileList = ref([])
 // 保存上传成功后的附件ID数组，提交帖子时一起传给后端
 const attachmentIds = ref([])
+
 // 分类、标签下拉选项
 const categories = ref([])
 const tagList = ref([])
@@ -107,14 +110,14 @@ const form = ref({
 // 页面加载时拉取分类和已有标签
 async function loadOptions() {
   try {
-    const catRes = await getCategories()
-    const tagRes = await getTags()
-
-    // 兼容两种返回格式：直接返回数组 / 包裹在 data 字段里
-    categories.value = Array.isArray(catRes) ? catRes : (catRes.data || [])
-    tagList.value = Array.isArray(tagRes) ? tagRes : (tagRes.data || [])
+      const [catRes, tagRes] = await Promise.all([
+          getCategories(),
+          getTags()
+      ])
+      categories.value = catRes || []
+      tagList.value = tagRes || []
   } catch (e) {
-    console.error('加载分类/标签失败', e)
+      console.error('加载分类/标签失败', e)
   }
 }
 

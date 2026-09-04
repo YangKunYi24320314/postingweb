@@ -1,172 +1,77 @@
-require('dotenv').config();
-console.log('【验证密码读取】密码值：', process.env.DB_PASSWORD, ' | 类型：', typeof process.env.DB_PASSWORD);
-const express = require('express');
-const cors = require('cors');
-const multer = require('multer');
-const path = require('path');
-const app = express();
+// 后端入口：组装中间件 + 自动加载 routes/ 下的所有路由。
+const express = require('express')
+const cors = require('cors')
+const fs = require('fs')
+const multer = require('multer')
+const path = require('path')
+require('dotenv').config()
 
-app.use(express.json({ charset: 'utf-8' }));
-app.use(cors());
+const { ok, fail, CODE } = require('./utils/response')
+const { UPLOAD_DIR } = require('./utils/avatar-upload')
 
-// 静态资源托管：访问 /static/xxx
-app.use('/static', express.static(path.join(__dirname, './static')));
+const app = express()
+const clientDist = path.join(__dirname, '..', 'client', 'dist')
+const legacyUploadDir = path.join(__dirname, 'static')
 
-// multer上传配置（旧版通用图片上传，保留兼容）
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // 文件保存到 server/static 文件夹
-    cb(null, path.join(__dirname, './static'))
+app.use(express.json({ charset: 'utf-8' }))
+app.use(cors())
+app.use('/uploads', express.static(UPLOAD_DIR))
+app.use('/static', express.static(path.join(__dirname, 'static')))
+
+const legacyUpload = multer({
+  storage: multer.diskStorage({
+    destination: legacyUploadDir,
+    filename: (req, file, callback) => {
+      const extension = path.extname(file.originalname).toLowerCase()
+      callback(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`)
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, callback) => {
+    const allowed = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+    callback(null, allowed.has(file.mimetype))
   },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname)
-    const newFileName = Date.now() + '-' + Math.random().toString(36).slice(2) + ext
-    cb(null, newFileName)
-  }
 })
 
-// 增加图片格式校验（过滤非图片文件）
-const fileFilter = (req, file, cb) => {
-  const allowType = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
-  if (allowType.includes(file.mimetype)) {
-    cb(null, true)
-  } else {
-    cb(new Error('只允许上传图片'), false)
-  }
-}
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 限制10MB
-  fileFilter: fileFilter
-})
-
-// 旧版上传接口 POST /upload（保留兼容）
-app.post('/upload', upload.single('file'), (req, res) => {
-  if (!req.file) {
-    return res.json({ code: 400, msg: '没有接收到文件或文件格式错误' })
-  }
-  const fileUrl = `http://127.0.0.1:3000/static/${req.file.filename}`
-  res.json({
-    code: 200,
-    data: {
-      url: fileUrl
-    }
-  })
+app.post('/upload', legacyUpload.single('file'), (req, res) => {
+  if (!req.file) return fail(res, CODE.PARAM_ERROR, '没有接收到图片')
+  return ok(res, { url: `${req.protocol}://${req.get('host')}/static/${req.file.filename}` })
 })
 
 app.get('/api/hello', (req, res) => {
-  res.json({ message: 'Hello from backend!' });
-});
+  ok(res, { message: 'Hello from backend!' })
+})
 
-// ========== 路由挂载区 ==========
+const routesDir = path.join(__dirname, 'routes')
+fs.readdirSync(routesDir)
+  .filter((file) => file.endsWith('.js'))
+  .forEach((file) => {
+    const routeModule = require(path.join(routesDir, file))
+    app.use('/api', routeModule)
+  })
 
-// 1. 帖子路由
-let postRoutes;
-try{
-  postRoutes = require('./routes/posts');
-  console.log("✅ 帖子路由加载成功");
-}catch(e){
-  console.error("❌ 帖子路由加载失败：",e.message);
-}
-if(postRoutes){
-  app.use('/api', postRoutes);
-  console.log("✅ /api/posts 路由挂载完成");
-}
+app.use('/api', (req, res) => {
+  fail(res, CODE.NOT_FOUND, '接口不存在', 404)
+})
 
-// 2. 认证路由（注册、登录）
-let authRoutes;
-try{
-  authRoutes = require('./routes/auth');
-  console.log("✅ 认证路由加载成功");
-}catch(e){
-  console.error("❌ 认证路由加载失败：",e.message);
-}
-if(authRoutes){
-  app.use('/api', authRoutes);
-  console.log("✅ /api/auth 路由挂载完成");
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist))
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api')) return next()
+    if (req.method !== 'GET') return next()
+    return res.sendFile(path.join(clientDist, 'index.html'))
+  })
 }
 
-// 3. 附件路由
-let attachmentRoutes;
-try{
-  attachmentRoutes = require('./routes/attachments');
-  console.log("✅ 附件路由加载成功");
-}catch(e){
-  console.error("❌ 附件路由加载失败：",e.message);
-}
-if(attachmentRoutes){
-  app.use('/api', attachmentRoutes);
-  console.log("✅ /api/attachments 路由挂载完成");
-}
+app.use((err, req, res, next) => {
+  console.error(err)
+  if (err.status && err.status < 500) {
+    return fail(res, CODE.PARAM_ERROR, '请求格式错误', err.status)
+  }
+  return fail(res, CODE.SERVER_ERROR, '服务器内部错误', 500)
+})
 
-// 4. 分类&标签路由
-let catalogRoutes;
-try{
-  catalogRoutes = require('./routes/catalog');
-  console.log("✅ 分类标签路由加载成功");
-}catch(e){
-  console.error("❌ 分类标签路由加载失败：",e.message);
-}
-if(catalogRoutes){
-  app.use('/api', catalogRoutes);
-  console.log("✅ /api/categories 路由挂载完成");
-}
-
-// 5. 互动路由（点赞、收藏）
-let interactionRoutes;
-try{
-  interactionRoutes = require('./routes/interactions');
-  console.log("✅ 互动路由加载成功");
-}catch(e){
-  console.error("❌ 互动路由加载失败：",e.message);
-}
-if(interactionRoutes){
-  app.use('/api', interactionRoutes);
-  console.log("✅ /api/posts/:id/like 路由挂载完成");
-}
-
-// 6. 评论路由
-let commentRoutes;
-try{
-  commentRoutes = require('./routes/comments');
-  console.log("✅ 评论路由加载成功");
-}catch(e){
-  console.error("❌ 评论路由加载失败：",e.message);
-}
-if(commentRoutes){
-  app.use('/api', commentRoutes);
-  console.log("✅ /api/comments 路由挂载完成");
-}
-
-// 7. 浏览历史路由
-let historyRoutes;
-try{
-  historyRoutes = require('./routes/history');
-  console.log("✅ 历史路由加载成功");
-}catch(e){
-  console.error("❌ 历史路由加载失败：",e.message);
-}
-if(historyRoutes){
-  app.use('/api', historyRoutes);
-  console.log("✅ /api/history 路由挂载完成");
-}
-
-// 8. 个人信息路由
-let meRoutes;
-try{
-  meRoutes = require('./routes/me');
-  console.log("✅ 个人信息路由加载成功");
-}catch(e){
-  console.error("❌ 个人信息路由加载失败：",e.message);
-}
-if(meRoutes){
-  app.use('/api', meRoutes);
-  console.log("✅ /api/me 路由挂载完成");
-}
-
-// ========== 启动服务 ==========
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000)
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-});
+  console.log(`Server is running on port ${PORT}`)
+})
