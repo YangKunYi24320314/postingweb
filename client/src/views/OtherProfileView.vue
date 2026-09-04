@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { View, ChatDotRound, Pointer } from '@element-plus/icons-vue'
+import { View, ChatDotRound, Pointer, ArrowLeft } from '@element-plus/icons-vue'
 import { getUserInfo, getUserPosts } from '../api/user'
 
 const route = useRoute()
@@ -88,6 +88,15 @@ function goPost(row) {
   router.push(`/post/${row.id}`)
 }
 
+// 返回上一页：有浏览历史就后退；直接输入网址进来则回首页
+function goBack() {
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+    router.push('/')
+  }
+}
+
 function formatTime(iso) {
   if (!iso) return '-'
   const d = new Date(iso)
@@ -131,6 +140,11 @@ watch(
 
 <template>
   <div class="page-container">
+    <!-- 左上角返回按钮 -->
+    <div class="profile__topbar">
+      <el-button :icon="ArrowLeft" plain round @click="goBack">返回</el-button>
+    </div>
+
     <!-- 用户信息卡（无 "···" 按钮） -->
     <el-card
       shadow="never"
@@ -229,6 +243,9 @@ watch(
 </template>
 
 <style scoped>
+.profile__topbar {
+  margin-bottom: var(--space-md);
+}
 .profile__info {
   position: relative;
   overflow: hidden;
