@@ -124,7 +124,7 @@ function goDetail() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-primary) 75%, transparent);
 }
 .media-preview__plus {
   color: var(--bg-white);
