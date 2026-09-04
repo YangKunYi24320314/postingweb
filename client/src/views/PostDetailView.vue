@@ -125,6 +125,16 @@ function handleDownload(file) {
   window.open(`/api/attachments/${file.id}/download`, '_blank')
 }
 
+function searchByTag(tag) {
+  router.push({
+    name: 'PostPage',
+    query: {
+      tag,
+      keyword: tag,
+    },
+  })
+}
+
 // 删除帖子（软删除，仅作者或管理员，删除后回到帖子广场）
 async function handleDelete() {
   try {
@@ -209,7 +219,16 @@ onMounted(async () => {
         </div>
 
         <div v-if="post.tags && post.tags.length" class="detail-card__tags">
-          <el-tag v-for="tag in post.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
+          <el-tag
+            v-for="tag in post.tags"
+            :key="tag"
+            class="detail-card__tag"
+            size="small"
+            effect="plain"
+            @click="searchByTag(tag)"
+          >
+            {{ tag }}
+          </el-tag>
         </div>
 
         <div class="detail-card__content">{{ post.content }}</div>
@@ -324,6 +343,11 @@ onMounted(async () => {
   gap: var(--space-xs);
   margin-top: var(--space-sm);
   flex-wrap: wrap;
+}
+
+.detail-card__tag {
+  cursor: pointer;
+  user-select: none;
 }
 
 .detail-card__content {
