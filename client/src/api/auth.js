@@ -40,8 +40,8 @@ export function updateProfile(data) {
 
 export function uploadAvatar(file) {
   const formData = new FormData()
-  formData.append('avatar', file)
-  return request.post('/auth/avatar', formData)
+  formData.append('file', file)
+  return request.post('/me/avatar', formData)
 }
 
 export function getPublicUser(id) {

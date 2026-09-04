@@ -7,7 +7,6 @@
 const express = require('express')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const multer = require('multer')
 const pool = require('../db')
 const { ok, fail, CODE } = require('../utils/response')
 const { auth } = require('../middleware/auth')
@@ -18,29 +17,9 @@ const { createVerificationService } = require('../services/verification-service'
 const { createContactAuthService } = require('../services/contact-auth')
 const { findPublicUser, parsePublicUserId } = require('../services/public-user')
 const { toUser } = require('../utils/user-profile')
-const {
-  MAX_AVATAR_SIZE,
-  UPLOAD_DIR,
-  createAvatarFileName,
-  getAvatarUrl,
-  isAllowedAvatar,
-} = require('../utils/avatar-upload')
 
 const router = express.Router()
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
-const avatarUpload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (req, file, callback) => callback(null, createAvatarFileName(file)),
-  }),
-  limits: { fileSize: MAX_AVATAR_SIZE },
-  fileFilter: (req, file, callback) => {
-    if (!isAllowedAvatar(file)) {
-      return callback(new Error('头像只支持 JPG、PNG、GIF 或 WEBP 图片'))
-    }
-    callback(null, true)
-  },
-})
 
 let contactAuthService
 
@@ -112,7 +91,7 @@ function signToken(userId) {
 
 // POST /api/auth/register —— 注册
 router.post('/auth/register', async (req, res) => {
-  const { username, password } = req.body || {}
+  const { username, password, nickname } = req.body || {}
   let credentials
   try {
     credentials = validateCredentials(username, password)
@@ -133,12 +112,14 @@ router.post('/auth/register', async (req, res) => {
 
   // 密码必须加密后才入库，绝不能存明文
   const passwordHash = await bcrypt.hash(password, 10)
+  // 昵称可传可不传：没传就用用户名兜底（与契约字段 nickname 对齐）
+  const finalNickname = (typeof nickname === 'string' ? nickname.trim() : '') || credentials.username
 
   const result = await pool.query(
     `INSERT INTO users (username, password_hash, nickname)
      VALUES ($1, $2, $3)
      RETURNING id, username, nickname, avatar_url, bio, role`,
-    [credentials.username, passwordHash, credentials.username]
+    [credentials.username, passwordHash, finalNickname]
   )
 
   const user = result.rows[0]
@@ -162,7 +143,7 @@ router.post('/auth/login', async (req, res) => {
 // GET /api/auth/me —— 获取当前登录用户（需登录）
 router.get('/auth/me', auth, async (req, res) => {
   const result = await pool.query(
-    'SELECT id, username, avatar_url, bio, role, phone, email FROM users WHERE id = $1 AND status = 1',
+    'SELECT id, username, nickname, avatar_url, bio, role, phone, email FROM users WHERE id = $1 AND status = 1',
     [req.userId]
   )
   if (result.rowCount === 0) {
@@ -173,16 +154,19 @@ router.get('/auth/me', auth, async (req, res) => {
 
 // PUT /api/auth/profile —— 更新个人信息（需登录）
 router.put('/auth/profile', auth, async (req, res) => {
-  const { bio, avatarUrl } = req.body || {}
+  const { nickname, bio, avatarUrl } = req.body || {}
+  // 昵称可传可不传：没传就保留原值，避免把空字符串写进库
+  const finalNickname = typeof nickname === 'string' && nickname.trim() ? nickname.trim() : null
 
   // COALESCE：传了才更新，没传就保留原值
   const result = await pool.query(
     `UPDATE users
-     SET bio = COALESCE($1, bio),
-         avatar_url = COALESCE($2, avatar_url)
-     WHERE id = $3
-     RETURNING id, username, avatar_url, bio, role, phone, email`,
-    [bio || null, avatarUrl || null, req.userId]
+     SET nickname = COALESCE($1, nickname),
+         bio = COALESCE($2, bio),
+         avatar_url = COALESCE($3, avatar_url)
+     WHERE id = $4
+     RETURNING id, username, nickname, avatar_url, bio, role, phone, email`,
+    [finalNickname, bio || null, avatarUrl || null, req.userId]
   )
 
   if (result.rowCount === 0) {
@@ -260,41 +244,6 @@ router.post('/auth/password/reset', async (req, res) => {
   } catch (error) {
     return handleAuthError(res, error)
   }
-})
-
-// POST /api/auth/avatar —— 上传当前用户头像（需登录）
-router.post('/auth/avatar', auth, (req, res, next) => {
-  avatarUpload.single('avatar')(req, res, (error) => {
-    if (error) {
-      if (error.code === 'LIMIT_FILE_SIZE') {
-        return fail(res, CODE.PARAM_ERROR, '头像不能超过 2MB')
-      }
-      if (error.message) {
-        return fail(res, CODE.PARAM_ERROR, error.message)
-      }
-      return next(error)
-    }
-    next()
-  })
-}, async (req, res) => {
-  if (!req.file) {
-    return fail(res, CODE.PARAM_ERROR, '请选择头像图片')
-  }
-
-  const avatarUrl = getAvatarUrl(req.file.filename)
-  const result = await pool.query(
-    `UPDATE users
-        SET avatar_url = $1
-      WHERE id = $2 AND status = 1
-      RETURNING id, username, avatar_url, bio, role, phone, email`,
-    [avatarUrl, req.userId]
-  )
-
-  if (result.rowCount === 0) {
-    return fail(res, CODE.NOT_FOUND, '用户不存在', 404)
-  }
-
-  return ok(res, toUser(result.rows[0]))
 })
 
 // GET /api/users/:id —— 查看某用户公开信息（无需登录）

@@ -84,8 +84,10 @@ async function handleAvatarUpload(uploadFile) {
   avatarUploading.value = true
   try {
     const data = await uploadAvatar(file)
-    user.value = data
-    avatarPreview.value = data.avatarUrl || avatarPreview.value
+    if (user.value) {
+      user.value.avatarUrl = data.url
+    }
+    avatarPreview.value = data.url
     ElMessage.success('头像已更新')
   } catch (error) {
     avatarPreview.value = user.value?.avatarUrl || ''
@@ -240,7 +242,9 @@ onMounted(loadProfile)
                 :loading="contactSending.phone"
                 @click="handleSendContactCode('phone')"
               >
-                {{ contactCountdown.phone > 0 ? `${contactCountdown.phone}s 后重发` : '获取验证码' }}
+                {{
+                  contactCountdown.phone > 0 ? `${contactCountdown.phone}s 后重发` : '获取验证码'
+                }}
               </el-button>
             </div>
           </el-form-item>
@@ -261,7 +265,9 @@ onMounted(loadProfile)
                 :loading="contactSending.email"
                 @click="handleSendContactCode('email')"
               >
-                {{ contactCountdown.email > 0 ? `${contactCountdown.email}s 后重发` : '获取验证码' }}
+                {{
+                  contactCountdown.email > 0 ? `${contactCountdown.email}s 后重发` : '获取验证码'
+                }}
               </el-button>
             </div>
           </el-form-item>
@@ -271,18 +277,39 @@ onMounted(loadProfile)
         </el-form>
       </div>
 
-      <el-form label-position="top" class="profile__password-form" @submit.prevent="handleChangePassword">
+      <el-form
+        label-position="top"
+        class="profile__password-form"
+        @submit.prevent="handleChangePassword"
+      >
         <h3>修改密码</h3>
         <el-form-item label="当前密码">
-          <el-input v-model="passwordForm.currentPassword" type="password" show-password autocomplete="current-password" />
+          <el-input
+            v-model="passwordForm.currentPassword"
+            type="password"
+            show-password
+            autocomplete="current-password"
+          />
         </el-form-item>
         <el-form-item label="新密码">
-          <el-input v-model="passwordForm.newPassword" type="password" show-password autocomplete="new-password" />
+          <el-input
+            v-model="passwordForm.newPassword"
+            type="password"
+            show-password
+            autocomplete="new-password"
+          />
         </el-form-item>
         <el-form-item label="确认新密码">
-          <el-input v-model="passwordForm.confirmPassword" type="password" show-password autocomplete="new-password" />
+          <el-input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            show-password
+            autocomplete="new-password"
+          />
         </el-form-item>
-        <el-button type="primary" :loading="passwordSaving" native-type="submit">修改密码</el-button>
+        <el-button type="primary" :loading="passwordSaving" native-type="submit"
+          >修改密码</el-button
+        >
       </el-form>
 
       <el-form label-position="top" class="profile__form" @submit.prevent="submitProfile">

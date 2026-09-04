@@ -35,6 +35,7 @@ test('public user lookup returns a safe public profile and post count', async ()
   assert.deepEqual(profile, {
     id: 12,
     username: 'scu123',
+    nickname: '校园用户',
     avatarUrl: null,
     bio: '喜欢分享校园生活',
     postCount: 3,

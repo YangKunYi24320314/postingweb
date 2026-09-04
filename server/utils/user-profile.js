@@ -2,6 +2,7 @@ function toUser(row) {
   const user = {
     id: row.id,
     username: row.username,
+    nickname: row.nickname,
     avatarUrl: row.avatar_url,
     bio: row.bio,
     role: row.role,
