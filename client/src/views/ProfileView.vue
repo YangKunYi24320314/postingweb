@@ -47,6 +47,7 @@ const bgCropVisible = ref(false) // 背景裁剪弹窗
 const bgCropImageSrc = ref('') // 待裁剪的背景原图
 const bgFileInput = ref(null) // 背景文件选择器
 const uploadingBg = ref(false) // 背景上传中
+const bgLoaded = ref(false) // 背景图是否已加载（用于淡入）
 
 // 页签名 → 对应的接口函数
 const fetchers = {
@@ -138,6 +139,17 @@ async function loadStats() {
   }
 }
 
+// 预加载图片，加载完成后执行回调（用于图片淡入）
+function preloadImage(url, onLoad) {
+  if (!url) {
+    onLoad()
+    return
+  }
+  const img = new Image()
+  img.onload = onLoad
+  img.src = url
+}
+
 // 加载背景图
 async function loadBackground() {
   try {
@@ -146,6 +158,11 @@ async function loadBackground() {
   } catch {
     backgroundUrl.value = ''
   }
+  // 预加载背景图，加载完成后淡入
+  bgLoaded.value = false
+  preloadImage(backgroundUrl.value, () => {
+    bgLoaded.value = true
+  })
 }
 
 // 打开编辑弹窗：回显当前信息
@@ -252,6 +269,11 @@ async function handleBgCropped(blob) {
     formData.append('file', blob, 'background.jpg')
     const data = await uploadBackground(formData)
     backgroundUrl.value = data.url
+    // 预加载新背景图，加载完成后淡入
+    bgLoaded.value = false
+    preloadImage(data.url, () => {
+      bgLoaded.value = true
+    })
     bgCropVisible.value = false
     ElMessage.success('背景更新成功')
   } catch (err) {
@@ -284,6 +306,7 @@ onMounted(() => {
     <el-card
       shadow="never"
       class="profile__info"
+      :class="{ 'profile__info--bg-loaded': bgLoaded }"
       :style="backgroundUrl ? { '--profile-bg': `url('${backgroundUrl}')` } : {}"
     >
       <div class="info__actions">
@@ -487,10 +510,14 @@ onMounted(() => {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  opacity: 0.6;
+  opacity: 0;
+  transition: opacity 0.6s ease;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
   pointer-events: none;
+}
+.profile__info--bg-loaded::before {
+  opacity: 0.6;
 }
 .profile__info::after {
   content: '';
