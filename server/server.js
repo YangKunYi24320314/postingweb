@@ -9,6 +9,10 @@ const app = express();
 app.use(express.json({ charset: 'utf-8' }));
 app.use(cors());
 
+// ========== 【修改1：新增 前端页面托管】访问根路径直接打开网站 ==========
+// 打包后的前端dist目录，局域网设备直接输IP就能打开
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
 // 静态资源托管：访问 /static/xxx
 app.use('/static', express.static(path.join(__dirname, './static')));
 
@@ -46,7 +50,10 @@ app.post('/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.json({ code: 400, msg: '没有接收到文件或文件格式错误' })
   }
-  const fileUrl = `http://127.0.0.1:3000/static/${req.file.filename}`
+  // ========== 【修改2：改用环境变量的BASE_URL，适配局域网访问】 ==========
+  // 从.env读取基础地址，默认回退到本机地址
+  const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:3000'
+  const fileUrl = `${baseUrl}/static/${req.file.filename}`
   res.json({
     code: 200,
     data: {
@@ -60,7 +67,6 @@ app.get('/api/hello', (req, res) => {
 });
 
 // ========== 路由挂载区 ==========
-
 // 1. 帖子路由
 let postRoutes;
 try{
@@ -165,8 +171,25 @@ if(meRoutes){
   console.log("✅ /api/me 路由挂载完成");
 }
 
+// ========== 新增：Vue history模式全局兜底（兼容版） ==========
+// 所有未匹配的GET请求、非接口非静态资源，统一返回前端index.html
+app.use((req, res, next) => {
+  // 只拦截 GET 请求，且排除 /api 接口和 /static 静态资源
+  if (req.method === 'GET' 
+      && !req.path.startsWith('/api') 
+      && !req.path.startsWith('/static')) {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'))
+  } else {
+    // 接口和静态资源正常放行
+    next()
+  }
+})
 // ========== 启动服务 ==========
 const PORT = 3000;
-app.listen(PORT, () => {
+// ========== 【修改3：监听 0.0.0.0，放开局域网所有设备访问】 ==========
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`本机访问：http://127.0.0.1:${PORT}`);
+  // ========== 【修改4：增加局域网访问地址提示】 ==========
+  console.log(`局域网访问：http://10.252.63.98:${PORT}`);
 });
