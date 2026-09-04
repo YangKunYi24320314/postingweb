@@ -8,6 +8,7 @@ import { saveToken } from '../api/request'
 import { getMyPosts, getMyFavorites, getMyLikes, uploadAvatar, getMeStats, uploadBackground, getMeBackground } from '../api/record'
 import RecentHistoryPreview from '../components/RecentHistoryPreview.vue'
 import AvatarCropper from '../components/AvatarCropper.vue'
+import PostMediaPreview from '../components/PostMediaPreview.vue'
 
 const router = useRouter()
 
@@ -498,6 +499,8 @@ onMounted(() => {
         <div v-if="contentPreview(row.content)" class="profile-post-card__preview">
           {{ contentPreview(row.content) }}
         </div>
+        <!-- 附件图片/视频预览（一直展示，位于正文预览下方） -->
+        <PostMediaPreview :attachments="row.attachments || []" :post-id="row.id" />
         <div class="profile-post-card__stats">
           <span><el-icon><View /></el-icon> {{ row.viewCount }}</span>
           <span><el-icon><ChatDotRound /></el-icon> {{ row.commentCount }}</span>

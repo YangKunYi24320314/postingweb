@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { View, ChatDotRound, Pointer, ArrowLeft } from '@element-plus/icons-vue'
 import { getUserInfo, getUserPosts } from '../api/user'
+import PostMediaPreview from '../components/PostMediaPreview.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -215,6 +216,8 @@ watch(
         <div v-if="contentPreview(row.content)" class="profile-post-card__preview">
           {{ contentPreview(row.content) }}
         </div>
+        <!-- 附件图片/视频预览（一直展示，位于正文预览下方） -->
+        <PostMediaPreview :attachments="row.attachments || []" :post-id="row.id" />
         <div class="profile-post-card__stats">
           <span><el-icon><View /></el-icon> {{ row.viewCount }}</span>
           <span><el-icon><ChatDotRound /></el-icon> {{ row.commentCount }}</span>
