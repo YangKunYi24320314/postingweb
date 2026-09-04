@@ -182,13 +182,78 @@
 
 ### 7.1 浏览记录
 - `POST /posts/:id/view`（需登录）— 进入帖子详情时上报一次浏览
-- `GET /me/history` — 我的浏览记录（分页）
+- `GET /me/history` — 我的浏览记录（分页；可选 `keyword` 参数，对标题/正文/作者昵称做模糊匹配）
 - `DELETE /me/history` — 清空浏览记录
 
 ### 7.2 我的内容
 - `GET /me/posts` — 我发布的帖子（分页）
 - `GET /me/favorites` — 我收藏的帖子（分页）
 - `GET /me/likes` — 我点赞的帖子（分页，可选）
+
+> 三个接口都支持可选 `keyword` 参数，对标题/正文/作者昵称做模糊匹配。
+
+三个接口返回的分页列表项结构一致（复用 `Post` 结构，另含个人主页渲染专用字段）：
+
+```json
+{
+  "id": 1, "title": "标题", "categoryId": 2, "categoryName": "分类名",
+  "content": "帖子正文", "tags": ["标签1", "标签2"],
+  "author": { "id": 1, "nickname": "作者昵称" },
+  "viewCount": 10, "likeCount": 3, "favoriteCount": 2, "commentCount": 5,
+  "createdAt": "2026-09-03T08:00:00.000Z",
+  "favoritedAt": "2026-09-03T09:00:00.000Z",
+  "likedAt": "2026-09-03T10:00:00.000Z"
+}
+```
+
+> 说明：
+> - 列表项作者字段用 `author`（等价于 `Post` 结构里的 `user`，只含 `id` + `nickname`）。
+> - `content` / `categoryName` / `tags` 是个人主页卡片渲染与悬浮预览正文所需字段。
+> - `favoritedAt` 仅 `/me/favorites` 返回；`likedAt` 仅 `/me/likes` 返回，其余接口省略这两个字段。
+
+### 7.3 头像上传
+- `POST /me/avatar`（需登录）— 上传头像
+
+**请求**：`multipart/form-data`，字段名固定为 `file`（单张图片，最大 5MB）。
+
+**响应 data**：
+
+```json
+{ "url": "http://host/static/avatars/avatar-xxx.png" }
+```
+
+> 头像文件存到后端 `server/static/avatars/`，前端用返回的 `url` 直接显示（通过 `/static/avatars/...` 访问）。
+
+### 7.4 收获统计
+- `GET /me/stats`（需登录）— 我发布的帖子收获的赞/收藏总数
+
+**响应 data**：
+
+```json
+{ "totalLikes": 12, "totalFavorites": 5 }
+```
+
+> `totalLikes` = 我所有帖子的 `like_count` 之和；`totalFavorites` = 我所有帖子的 `favorite_count` 之和（只统计未删除的帖子）。
+
+### 7.5 背景图
+- `POST /me/background`（需登录）— 上传并保存个人信息背景图
+- `GET /me/background`（需登录）— 获取我的背景图
+
+**上传请求**：`multipart/form-data`，字段名固定为 `file`（单张图片，最大 5MB）。
+
+**上传响应 data**：
+
+```json
+{ "url": "http://host/static/backgrounds/bg-xxx.png" }
+```
+
+**获取响应 data**：
+
+```json
+{ "backgroundUrl": "http://host/static/backgrounds/bg-xxx.png" }
+```
+
+> 背景图文件存到后端 `server/static/backgrounds/`；`POST` 会把 `url` 直接写进 `users.background_url`。未设置自定义背景时，`GET` 返回默认背景 `/static/default-background.jpg`。
 
 ---
 

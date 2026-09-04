@@ -80,17 +80,30 @@ router.post('/posts/:id/view', auth, async (req, res) => {
   return ok(res, null)
 })
 
-// GET /api/me/history —— 我的浏览记录（需登录，分页）
+// GET /api/me/history —— 我的浏览记录（需登录，分页，支持 keyword 模糊搜索）
 router.get('/me/history', auth, async (req, res) => {
   const { page, pageSize, offset } = parsePage(req.query)
+  const keyword = String(req.query.keyword || '').trim()
+
+  // 动态拼接过滤条件：keyword 非空时对「标题/正文/作者昵称」做 ILIKE 模糊匹配
+  const conditions = ['h.user_id = $1', 'p.is_deleted = false']
+  const params = [req.userId]
+  if (keyword) {
+    params.push(`%${keyword}%`)
+    conditions.push(
+      `(p.title ILIKE $${params.length} OR p.content ILIKE $${params.length} OR u.nickname ILIKE $${params.length})`
+    )
+  }
+  const where = conditions.join(' AND ')
 
   // 总条数：只统计"仍存在"的帖子（软删除的不显示）
   const count = await pool.query(
     `SELECT COUNT(*)::int AS total
      FROM histories h
      JOIN posts p ON p.id = h.post_id
-     WHERE h.user_id = $1 AND p.is_deleted = false`,
-    [req.userId]
+     JOIN users u ON u.id = p.user_id
+     WHERE ${where}`,
+    params
   )
   const total = count.rows[0].total
 
@@ -102,10 +115,10 @@ router.get('/me/history', auth, async (req, res) => {
      FROM histories h
      JOIN posts p ON p.id = h.post_id
      JOIN users u ON u.id = p.user_id
-     WHERE h.user_id = $1 AND p.is_deleted = false
+     WHERE ${where}
      ORDER BY h.viewed_at DESC
-     LIMIT $2 OFFSET $3`,
-    [req.userId, pageSize, offset]
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, pageSize, offset]
   )
 
   return ok(res, {

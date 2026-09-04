@@ -23,6 +23,7 @@ CREATE TABLE users (
   password_hash VARCHAR(255) NOT NULL,
   nickname VARCHAR(50),
   avatar_url VARCHAR(500),
+  background_url VARCHAR(500),
   email VARCHAR(100) UNIQUE,
   bio VARCHAR(255),
   role VARCHAR(20) NOT NULL DEFAULT 'user',
