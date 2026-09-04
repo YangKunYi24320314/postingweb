@@ -72,6 +72,21 @@ onMounted(loadRecent)
   cursor: pointer;
 }
 
+/* 悬停行：所有文字变品牌色，并整体向左偏移 */
+:deep(.el-table__cell) {
+  transition: color 0.2s ease;
+}
+:deep(.el-table__cell .cell) {
+  transition: transform 0.2s ease;
+}
+:deep(.el-table__row:hover .el-table__cell),
+:deep(.el-table__row:hover .el-table__cell .cell) {
+  color: var(--brand-primary);
+}
+:deep(.el-table__row:hover .el-table__cell .cell) {
+  transform: translateX(-6px);
+}
+
 .recent-history {
   margin-top: var(--space-lg);
 }
