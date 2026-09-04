@@ -58,7 +58,15 @@ function buildPostFilters(query, startIndex = 1) {
   if (keyword !== undefined && keyword !== '') {
     params.push(`%${String(keyword).trim()}%`)
     conditions.push(
-      `(p.title ILIKE $${startIndex + params.length - 1} OR p.content ILIKE $${startIndex + params.length - 1})`
+      `(p.title ILIKE $${startIndex + params.length - 1}
+        OR p.content ILIKE $${startIndex + params.length - 1}
+        OR EXISTS(
+          SELECT 1
+          FROM post_tags keyword_pt
+          JOIN tags keyword_t ON keyword_t.id = keyword_pt.tag_id
+          WHERE keyword_pt.post_id = p.id
+            AND keyword_t.name ILIKE $${startIndex + params.length - 1}
+        ))`
     )
   }
 
@@ -84,6 +92,17 @@ function buildRankOrder(rank) {
   }
 
   return `${scores.join(' + ')} DESC, p.created_at DESC, p.id DESC`
+}
+
+function decayWeight(timeExpression) {
+  const days = `EXTRACT(EPOCH FROM (now() - ${timeExpression})) / 86400`
+  return `CASE
+    WHEN ${days} < 1 THEN 1.0
+    WHEN ${days} < 5 THEN 0.7
+    WHEN ${days} < 14 THEN 0.4
+    WHEN ${days} < 30 THEN 0.2
+    ELSE 0
+  END`
 }
 
 // ---------- 帖子 → 前端结构的翻译函数 ----------
@@ -226,23 +245,24 @@ router.get('/posts', optionalAuth, async (req, res) => {
   const preferenceSql = rank.includes('recommend')
     ? `
       WITH user_preferences AS (
-        SELECT behavior_tags.tag_id, SUM(behavior_tags.weight)::int AS weight
+        SELECT behavior_tags.tag_id, SUM(behavior_tags.weight)::numeric AS weight
         FROM (
-          SELECT pt.tag_id, 1 AS weight
+          SELECT pt.tag_id, 1 * ${decayWeight('h.viewed_at')} AS weight
           FROM histories h
           JOIN post_tags pt ON pt.post_id = h.post_id
           WHERE h.user_id = $1
           UNION ALL
-          SELECT pt.tag_id, 3 AS weight
+          SELECT pt.tag_id, 3 * ${decayWeight('pl.created_at')} AS weight
           FROM post_likes pl
           JOIN post_tags pt ON pt.post_id = pl.post_id
           WHERE pl.user_id = $1
           UNION ALL
-          SELECT pt.tag_id, 4 AS weight
+          SELECT pt.tag_id, 4 * ${decayWeight('f.created_at')} AS weight
           FROM favorites f
           JOIN post_tags pt ON pt.post_id = f.post_id
           WHERE f.user_id = $1
         ) behavior_tags
+        WHERE behavior_tags.weight > 0
         GROUP BY behavior_tags.tag_id
       ),
       preference_summary AS (
@@ -254,7 +274,7 @@ router.get('/posts', optionalAuth, async (req, res) => {
     ? `
       CROSS JOIN preference_summary ps
       LEFT JOIN LATERAL (
-        SELECT COALESCE(SUM(up.weight), 0)::int AS recommend_score
+        SELECT COALESCE(SUM(up.weight), 0)::numeric AS recommend_score
         FROM post_tags pt
         JOIN user_preferences up ON up.tag_id = pt.tag_id
         WHERE pt.post_id = p.id

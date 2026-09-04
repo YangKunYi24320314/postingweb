@@ -276,7 +276,16 @@ onMounted(async () => {
         </div>
 
         <div v-if="post.tags && post.tags.length" class="detail-card__tags">
-          <el-tag v-for="tag in post.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
+          <el-tag
+            v-for="tag in post.tags"
+            :key="tag"
+            class="detail-card__tag"
+            size="small"
+            effect="plain"
+            @click="searchByTag(tag)"
+          >
+            {{ tag }}
+          </el-tag>
         </div>
 
         <div class="detail-card__content">{{ post.content }}</div>

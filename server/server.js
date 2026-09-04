@@ -1,9 +1,9 @@
 require('dotenv').config();
-console.log('【验证密码读取】密码值：', process.env.DB_PASSWORD, ' | 类型：', typeof process.env.DB_PASSWORD);
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 
 app.use(express.json({ charset: 'utf-8' }));
@@ -50,10 +50,8 @@ app.post('/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.json({ code: 400, msg: '没有接收到文件或文件格式错误' })
   }
-  // ========== 【修改2：改用环境变量的BASE_URL，适配局域网访问】 ==========
-  // 从.env读取基础地址，默认回退到本机地址
-  const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:3000'
-  const fileUrl = `${baseUrl}/static/${req.file.filename}`
+  // 用请求方的主机名拼地址（局域网/部署下都不会写死 127.0.0.1）
+  const fileUrl = `${req.protocol}://${req.get('host')}/static/${req.file.filename}`
   res.json({
     code: 200,
     data: {
@@ -171,25 +169,30 @@ if(meRoutes){
   console.log("✅ /api/me 路由挂载完成");
 }
 
-// ========== 新增：Vue history模式全局兜底（兼容版） ==========
-// 所有未匹配的GET请求、非接口非静态资源，统一返回前端index.html
-app.use((req, res, next) => {
-  // 只拦截 GET 请求，且排除 /api 接口和 /static 静态资源
-  if (req.method === 'GET' 
-      && !req.path.startsWith('/api') 
-      && !req.path.startsWith('/static')) {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'))
-  } else {
-    // 接口和静态资源正常放行
-    next()
-  }
+// 未匹配的 /api 路由：按契约返回统一错误（防止被下面的前端 SPA 回退吞掉）
+app.use('/api', (req, res) => {
+  res.status(404).json({ code: 1004, message: '接口不存在', data: null })
 })
+
+// ========== 托管前端构建产物（方案B：单端口发布 / 局域网联机） ==========
+const clientDist = path.join(__dirname, '..', 'client', 'dist')
+if (fs.existsSync(clientDist)) {
+  // 静态资源：前端编译出的 assets / index.html / favicon 等
+  app.use(express.static(clientDist))
+  // SPA 回退：非 /api 的 GET 请求交给前端入口 index.html，由前端路由接管
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api')) {
+      return res.sendFile(path.join(clientDist, 'index.html'))
+    }
+    next()
+  })
+  console.log('✅ 已托管前端构建产物 client/dist，可直接用本服务地址访问网站')
+} else {
+  console.log('⚠️ 未发现 client/dist：请先在 client/ 下执行 npm run build，才能用本端口访问网站；开发调试请改用 vite。')
+}
+
 // ========== 启动服务 ==========
-const PORT = 3000;
-// ========== 【修改3：监听 0.0.0.0，放开局域网所有设备访问】 ==========
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`本机访问：http://127.0.0.1:${PORT}`);
-  // ========== 【修改4：增加局域网访问地址提示】 ==========
-  console.log(`局域网访问：http://10.252.63.98:${PORT}`);
+const PORT = Number(process.env.PORT || 3000)
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on http://localhost:${PORT}  (局域网访问：http://<本机IP>:${PORT})`)
 });
