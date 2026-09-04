@@ -1,23 +1,25 @@
 <script setup>
-// 帖子详情页：展示帖子全文 + 评论区（发表/回复/编辑/删除/点赞）。
+// 帖子详情页：展示帖子全文 + 评论区（发表/回复/编辑/删除/点赞）+ 附件在线预览。
 // 后端接口见 devdocs/api-protocol.md（帖子详情 / 评论 / 点赞 / 上报浏览）。
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Pointer } from '@element-plus/icons-vue'
+
 import { getPostById, deletePost } from '../api/post'
 import { getComments, createComment } from '../api/comments'
 import { reportView } from '../api/record'
 import { getMe } from '../api/auth'
 import { getToken } from '../api/request'
+
 import InteractionButtons from '../components/InteractionButtons.vue'
 import CommentItem from '../components/CommentItem.vue'
 
 const route = useRoute()
 const router = useRouter()
+
 // 从路由参数取出帖子 id（如 /post/3 -> 3）
 const postId = computed(() => Number(route.params.id))
-
 const post = ref(null)
 const comments = ref([])
 const myUserId = ref(null)
@@ -28,6 +30,12 @@ const commentsLoading = ref(false)
 // 顶级评论输入框
 const newContent = ref('')
 const submitting = ref(false)
+
+// ===== 附件预览弹窗控制 =====
+const imageVisible = ref(false)
+const pdfVisible = ref(false)
+const videoVisible = ref(false)
+const currentPreviewUrl = ref('')
 
 // 格式化时间：ISO → "2026-09-01 08:54"
 function formatTime(iso) {
@@ -120,7 +128,36 @@ function formatFileSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
-// 点击下载附件
+// 文件类型图标映射
+function getFileIcon(mimeType) {
+  if (mimeType.startsWith('image/')) return '🖼️'
+  if (mimeType === 'application/pdf') return '📄'
+  if (mimeType.startsWith('video/')) return '🎬'
+  if (mimeType.includes('word') || mimeType.includes('document')) return '📝'
+  if (mimeType.includes('excel') || mimeType.includes('sheet')) return '📊'
+  return '📎'
+}
+
+// ===== 附件预览：路径归一化，避免双斜杠导致域名解析失败 =====
+function handlePreview(file) {
+  // 去掉开头所有多余斜杠，统一加一个 /，保证是标准根相对路径
+  const fileUrl = '/' + file.file_path.replace(/^\/+/, '')
+  currentPreviewUrl.value = fileUrl
+
+  const type = file.mime_type
+  if (type.startsWith('image/')) {
+    imageVisible.value = true
+  } else if (type === 'application/pdf') {
+    pdfVisible.value = true
+  } else if (type.startsWith('video/')) {
+    videoVisible.value = true
+  } else {
+    // 不支持在线预览的格式，自动触发下载
+    handleDownload(file)
+  }
+}
+
+// ===== 独立下载功能：走原下载接口 =====
 function handleDownload(file) {
   window.open(`/api/attachments/${file.id}/download`, '_blank')
 }
@@ -214,24 +251,65 @@ onMounted(async () => {
 
         <div class="detail-card__content">{{ post.content }}</div>
 
-        <!-- 附件下载区域 -->
+        <!-- ===== 附件区域：点击文件名预览，点击按钮下载 ===== -->
         <div v-if="post.attachments && post.attachments.length" class="detail-card__attach">
-          <h4>📎 附件下载</h4>
-          <el-button
-            v-for="file in post.attachments"
-            :key="file.id"
-            class="detail-card__attach-item"
-            @click="handleDownload(file)"
-          >
-            <span class="file-name">{{ file.original_filename }}</span>
-            <span class="file-size">{{ formatFileSize(file.file_size) }}</span>
-          </el-button>
+          <h4>📎 附件</h4>
+          <div class="attach-list">
+            <div
+              v-for="file in post.attachments"
+              :key="file.id"
+              class="attach-item"
+            >
+              <!-- 左侧：图标+文件名，点击触发预览 -->
+              <div class="attach-info" @click="handlePreview(file)">
+                <span class="attach-icon">{{ getFileIcon(file.mime_type) }}</span>
+                <span class="attach-name">{{ file.original_filename }}</span>
+              </div>
+              <!-- 右侧：文件大小 + 下载按钮 -->
+              <div class="attach-actions">
+                <span class="attach-size">{{ formatFileSize(file.file_size) }}</span>
+                <el-button
+                  type="primary"
+                  size="small"
+                  text
+                  @click.stop="handleDownload(file)"
+                >
+                  下载
+                </el-button>
+              </div>
+            </div>
+          </div>
         </div>
 
+        <!-- 图片预览弹窗 -->
+        <el-dialog v-model="imageVisible" width="80%" top="5vh" :show-close="true">
+          <img
+            :src="currentPreviewUrl"
+            style="max-width: 100%; max-height: 80vh; display: block; margin: 0 auto;"
+            alt="图片预览"
+          />
+        </el-dialog>
+
+        <!-- PDF 预览弹窗 -->
+        <el-dialog v-model="pdfVisible" width="90%" top="5vh">
+          <iframe
+            :src="currentPreviewUrl"
+            style="width: 100%; height: 80vh; border: none; background: #fff;"
+            frameborder="0"
+          />
+        </el-dialog>
+
+        <!-- 视频预览弹窗 -->
+        <el-dialog v-model="videoVisible" width="80%" top="5vh">
+          <video
+            :src="currentPreviewUrl"
+            controls
+            style="width: 100%;"
+          />
+        </el-dialog>
+
         <div class="detail-card__stats">
-          <span
-            ><el-icon><Pointer /></el-icon> 浏览 {{ post.viewCount }}</span
-          >
+          <span><el-icon><Pointer /></el-icon> 浏览 {{ post.viewCount }}</span>
           <InteractionButtons
             :post-id="post.id"
             :liked="post.isLiked"
@@ -256,9 +334,7 @@ onMounted(async () => {
           :placeholder="getToken() ? '友善评论，理性发言...' : '登录后才能发表评论'"
         />
         <div class="comment-card__input-actions">
-          <el-button type="primary" :loading="submitting" @click="submitComment"
-            >发表评论</el-button
-          >
+          <el-button type="primary" :loading="submitting" @click="submitComment">发表评论</el-button>
         </div>
       </div>
 
@@ -286,18 +362,15 @@ onMounted(async () => {
   padding: var(--space-lg);
   margin-bottom: var(--space-md);
 }
-
 .detail-card__head {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
 }
-
 .detail-card__title {
   font-size: 22px;
   color: var(--text-primary);
 }
-
 .detail-card__pin {
   flex-shrink: 0;
   font-size: 12px;
@@ -306,11 +379,9 @@ onMounted(async () => {
   border-radius: var(--radius-sm);
   padding: 0 var(--space-xs);
 }
-
 .detail-card__delete {
   margin-left: auto;
 }
-
 .detail-card__meta {
   display: flex;
   gap: var(--space-md);
@@ -318,14 +389,12 @@ onMounted(async () => {
   color: var(--text-secondary);
   font-size: 13px;
 }
-
 .detail-card__tags {
   display: flex;
   gap: var(--space-xs);
   margin-top: var(--space-sm);
   flex-wrap: wrap;
 }
-
 .detail-card__content {
   margin-top: var(--space-md);
   color: var(--text-regular);
@@ -333,7 +402,6 @@ onMounted(async () => {
   word-break: break-word;
   line-height: 1.8;
 }
-
 .detail-card__attach {
   margin-top: var(--space-lg);
   display: flex;
@@ -341,7 +409,6 @@ onMounted(async () => {
   align-items: flex-start;
   gap: var(--space-sm);
 }
-
 .detail-card__attach h4 {
   margin: 0;
   font-size: 15px;
@@ -349,12 +416,52 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-.detail-card__attach-item {
+/* ===== 附件列表样式 ===== */
+.attach-list {
   display: flex;
-  gap: var(--space-sm);
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: 100%;
 }
-
-.detail-card__attach-item .file-size {
+.attach-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-soft);
+  border-radius: var(--radius-sm);
+  transition: background 0.2s;
+}
+.attach-item:hover {
+  background: var(--bg-hover);
+}
+.attach-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+  cursor: pointer;
+  overflow: hidden;
+}
+.attach-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.attach-name {
+  color: var(--text-primary);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attach-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+.attach-size {
   color: var(--text-secondary);
   font-size: 13px;
 }
@@ -369,7 +476,6 @@ onMounted(async () => {
   border-top: 1px solid var(--border-color-light);
   flex-wrap: wrap;
 }
-
 .detail-card__stats > span {
   display: inline-flex;
   align-items: center;
@@ -381,23 +487,19 @@ onMounted(async () => {
 .comment-card {
   padding: var(--space-lg);
 }
-
 .comment-card__title {
   font-size: 17px;
   color: var(--text-primary);
   margin-bottom: var(--space-md);
 }
-
 .comment-card__input {
   margin-bottom: var(--space-lg);
 }
-
 .comment-card__input-actions {
   display: flex;
   justify-content: flex-end;
   margin-top: var(--space-sm);
 }
-
 .comment-card__list {
   display: flex;
   flex-direction: column;
