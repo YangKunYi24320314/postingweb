@@ -99,17 +99,27 @@ function buildMyWhere(userCond, userId, keyword) {
   return { where: conditions.join(' AND '), params }
 }
 
-// GET /api/users/:id/posts —— 查看某用户发布的帖子（公开，分页）
+// GET /api/users/:id/posts —— 查看某用户发布的帖子（公开，分页，支持 keyword）
 router.get('/users/:id/posts', async (req, res) => {
   const userId = Number(req.params.id)
   if (!Number.isInteger(userId) || userId <= 0) {
     return fail(res, CODE.PARAM_ERROR, '用户 id 不合法')
   }
   const { page, pageSize, offset } = parsePage(req.query)
+  const keyword = String(req.query.keyword || '').trim()
+
+  // 关键词模糊匹配：标题/正文（作者固定为该用户，无需按作者搜）
+  const conditions = ['p.user_id = $1', 'p.is_deleted = false']
+  const params = [userId]
+  if (keyword) {
+    params.push(`%${keyword}%`)
+    conditions.push(`(p.title ILIKE $${params.length} OR p.content ILIKE $${params.length})`)
+  }
+  const where = conditions.join(' AND ')
 
   const count = await pool.query(
-    'SELECT COUNT(*)::int AS total FROM posts WHERE user_id = $1 AND is_deleted = false',
-    [userId]
+    `SELECT COUNT(*)::int AS total FROM posts p WHERE ${where}`,
+    params
   )
   const total = count.rows[0].total
 
@@ -121,10 +131,10 @@ router.get('/users/:id/posts', async (req, res) => {
      FROM posts p
      JOIN users u ON u.id = p.user_id
      LEFT JOIN categories c ON c.id = p.category_id
-     WHERE p.user_id = $1 AND p.is_deleted = false
+     WHERE ${where}
      ORDER BY p.created_at DESC
-     LIMIT $2 OFFSET $3`,
-    [userId, pageSize, offset]
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, pageSize, offset]
   )
 
   const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))

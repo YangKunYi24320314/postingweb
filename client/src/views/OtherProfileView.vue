@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { View, ChatDotRound, Pointer, ArrowLeft } from '@element-plus/icons-vue'
+import { View, ChatDotRound, Pointer, ArrowLeft, Search } from '@element-plus/icons-vue'
 import { getUserInfo, getUserPosts } from '../api/user'
 import PostMediaPreview from '../components/PostMediaPreview.vue'
 
@@ -20,6 +20,8 @@ const pageSize = ref(10)
 const loading = ref(false)
 let requestSeq = 0
 const listVersion = ref(0)
+const keyword = ref('') // 搜索关键词（标题/正文）
+let searchTimer = null // 防抖定时器
 
 // 头像全图预览
 const avatarPreviewVisible = ref(false)
@@ -64,7 +66,11 @@ async function loadPosts() {
   const seq = ++requestSeq
   loading.value = true
   try {
-    const data = await getUserPosts(id, { page: page.value, pageSize: pageSize.value })
+    const data = await getUserPosts(id, {
+      page: page.value,
+      pageSize: pageSize.value,
+      keyword: keyword.value || undefined,
+    })
     if (seq !== requestSeq) return
     list.value = data.list
     total.value = data.total
@@ -79,6 +85,15 @@ async function loadPosts() {
     }
   }
 }
+
+// 监听关键词变化：防抖 300ms 后回到第一页并重新加载
+watch(keyword, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    loadPosts()
+  }, 300)
+})
 
 function handlePageChange(p) {
   page.value = p
@@ -184,9 +199,19 @@ watch(
     <el-card v-loading="loading" shadow="never">
       <div class="profile__header">
         <h2 class="profile__title">Ta的投稿</h2>
+        <el-input
+          v-model="keyword"
+          class="profile__search"
+          placeholder="搜索标题或正文"
+          clearable
+          :prefix-icon="Search"
+        />
       </div>
 
-      <el-empty v-if="!loading && list.length === 0" description="暂无内容" />
+      <el-empty
+        v-if="!loading && list.length === 0"
+        :description="keyword ? '没有匹配的内容' : '暂无内容'"
+      />
       <div
         v-for="(row, index) in list"
         :key="`${listVersion}-${row.id}`"
@@ -408,6 +433,9 @@ watch(
 .profile__title {
   font-size: 18px;
   color: var(--text-primary);
+}
+.profile__search {
+  width: 240px;
 }
 
 .profile-post-card {
