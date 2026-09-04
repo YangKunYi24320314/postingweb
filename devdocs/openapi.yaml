@@ -14,7 +14,6 @@ tags:
   - name: 互动
   - name: 记录中心
   - name: 附件
-  - name: 推荐
 
 # ============================================================
 # 认证方式：JWT，请求头 Authorization: Bearer <token>
@@ -108,7 +107,7 @@ paths:
               properties:
                 nickname: { type: string, nullable: true, example: 新昵称 }
                 bio: { type: string, nullable: true, example: 新的简介 }
-                avatar_url: { type: string, nullable: true, example: "https://.../a.png" }
+                avatarUrl: { type: string, nullable: true, example: "https://.../a.png" }
       responses:
         '200':
           description: 更新成功
@@ -226,13 +225,13 @@ paths:
         - { name: categoryId, in: query, schema: { type: integer } }
         - { name: tag, in: query, schema: { type: string, example: 考研 } }
         - { name: keyword, in: query, schema: { type: string, example: 自习室 } }
-        - { name: sort, in: query, schema: { type: string, enum: [new, hot], default: new } }
-        - {
-            name: rank,
-            in: query,
-            description: 组合排序，逗号分隔；latest=最新，hot=热门，recommend=猜你喜欢。包含 recommend 时必须登录。
-            schema: { type: string, example: "latest,hot,recommend" },
-          }
+        - { name: sort, in: query, schema: { type: string, enum: [new, hot], default: new }, description: 兼容旧参数，新功能建议用 rank }
+        - name: rank
+          in: query
+          description: 组合排序，逗号分隔；latest=最新，hot=热门，recommend=猜你喜欢。包含 recommend 时必须登录。
+          schema:
+            type: string
+            example: "latest,hot,recommend"
       responses:
         '200':
           description: 成功
@@ -786,26 +785,6 @@ paths:
                 type: string
                 format: binary
 
-  # ======================= 推荐（二期可选） =======================
-  /recommend/posts:
-    get:
-      tags: [推荐]
-      summary: 个性化推荐帖子
-      parameters:
-        - { name: page, in: query, schema: { type: integer, default: 1 } }
-        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
-      responses:
-        '200':
-          description: 成功
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data: { $ref: '#/components/schemas/PageResult' }
-
 # ============================================================
 # 可复用的数据类型
 # ============================================================
@@ -853,7 +832,7 @@ components:
         id: { type: integer }
         username: { type: string }
         nickname: { type: string, nullable: true }
-        avatar_url: { type: string, nullable: true }
+        avatarUrl: { type: string, nullable: true }
         bio: { type: string, nullable: true }
         role: { type: string, example: user }
 

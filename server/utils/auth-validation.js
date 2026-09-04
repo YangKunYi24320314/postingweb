@@ -14,6 +14,9 @@ function validateCredentials(username, password) {
   if (normalizedUsername.length < 3 || normalizedUsername.length > 50) {
     throw validationError('用户名长度应为 3-50 位')
   }
+  if (/^1[3-9]\d{9}$/.test(normalizedUsername) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedUsername)) {
+    throw validationError('手机号或邮箱请绑定后登录，不能直接注册')
+  }
   if (normalizedPassword.length < 6) {
     throw validationError('密码长度不能少于 6 位')
   }
@@ -21,9 +24,4 @@ function validateCredentials(username, password) {
   return { username: normalizedUsername, password: normalizedPassword }
 }
 
-function normalizeNickname(username, nickname) {
-  const normalized = typeof nickname === 'string' ? nickname.trim() : ''
-  return normalized || username
-}
-
-module.exports = { validateCredentials, normalizeNickname }
+module.exports = { validateCredentials }

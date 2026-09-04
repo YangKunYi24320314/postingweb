@@ -66,13 +66,13 @@
 ### 2.3 `GET /auth/me` — 获取当前登录用户（需登录）
 **响应 data**
 ```json
-{ "id": 1, "username": "scu123", "nickname": "东门猛男", "avatar_url": "...", "bio": "...", "role": "user" }
+{ "id": 1, "username": "scu123", "nickname": "东门猛男", "avatarUrl": "...", "bio": "...", "role": "user" }
 ```
 
 ### 2.4 `PUT /auth/profile` — 更新个人信息（需登录）
 **请求**
 ```json
-{ "nickname": "新昵称", "bio": "新的简介", "avatar_url": "https://..." }
+{ "nickname": "新昵称", "bio": "新的简介", "avatarUrl": "https://..." }
 ```
 **响应 data**：更新后的用户信息。
 
