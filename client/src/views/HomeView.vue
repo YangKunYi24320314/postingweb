@@ -63,9 +63,7 @@ onMounted(loadPosts)
         </div>
       </div>
       <div class="home-hero__signal" aria-hidden="true">
-        <span class="home-hero__signal-label">TODAY</span>
-        <strong>01</strong>
-        <span>从一篇帖子开始交流</span>
+        <span>一天的开始，从第一篇帖</span>
       </div>
     </section>
 
@@ -117,9 +115,7 @@ onMounted(loadPosts)
 .home-hero h1 { margin-top: var(--space-md); font-size: clamp(36px, 5vw, 64px); line-height: 1.1; letter-spacing: 0; }
 .home-hero p { margin-top: var(--space-md); color: var(--text-secondary); font-size: 18px; }
 .home-hero__actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-xl); }
-.home-hero__signal { min-width: 170px; padding: var(--space-lg); border-left: 2px solid var(--brand-primary); color: var(--text-secondary); }
-.home-hero__signal-label { display: block; font-size: 11px; letter-spacing: 0.12em; }
-.home-hero__signal strong { display: block; margin: var(--space-xs) 0; color: var(--text-primary); font-size: 48px; line-height: 1; }
+.home-hero__signal { min-width: 170px; max-width: 220px; padding: var(--space-lg); border-left: 2px solid var(--brand-primary); color: var(--text-secondary); line-height: 1.6; }
 .home-feed { padding-top: 0; padding-bottom: var(--space-2xl); }
 .home-feed__heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-md); }
 .home-feed h2 { margin-top: var(--space-xs); font-size: 30px; }
