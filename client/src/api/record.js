@@ -31,3 +31,23 @@ export function getMyFavorites(params) {
 export function getMyLikes(params) {
   return request.get('/me/likes', { params })
 }
+
+// 上传头像（FormData，返回 { url }）
+export function uploadAvatar(formData) {
+  return request.post('/me/avatar', formData)
+}
+
+// 上传背景图（FormData，返回 { url }）
+export function uploadBackground(formData) {
+  return request.post('/me/background', formData)
+}
+
+// 获取我的背景图
+export function getMeBackground() {
+  return request.get('/me/background')
+}
+
+// 我的收获统计（获赞总数 / 获收藏总数）
+export function getMeStats() {
+  return request.get('/me/stats')
+}

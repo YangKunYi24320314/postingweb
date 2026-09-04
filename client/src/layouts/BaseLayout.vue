@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotRound, EditPen, Clock } from '@element-plus/icons-vue'
+import { ChatDotRound, EditPen } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { clearToken, getToken } from '../api/request'
 import { getAuthAction, logout } from '../utils/auth-navigation'
@@ -16,7 +16,6 @@ const activeMenu = computed(() => route.path)
 const menuItems = [
   { index: '/', label: '首页', icon: ChatDotRound },
   { index: '/post-page', label: '帖子广场', icon: EditPen },
-  { index: '/records', label: '记录中心', icon: Clock },
 ]
 
 function handleAuthAction() {
@@ -42,7 +41,7 @@ function handleLogout() {
         </router-link>
 
         <!-- 顶部导航：index=路由地址，router 属性让点击自动跳转 -->
-        <el-menu :default-active="activeMenu" mode="horizontal" router class="layout__menu">
+        <el-menu :default-active="activeMenu" mode="horizontal" router :ellipsis="false" class="layout__menu">
           <el-menu-item v-for="item in menuItems" :key="item.index" :index="item.index">
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>

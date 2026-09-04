@@ -40,6 +40,7 @@ erDiagram
 | password_hash | VARCHAR(255) | 非空 | 加密后的密码 |
 | nickname | VARCHAR(50) | 可空 | 显示昵称 |
 | avatar_url | VARCHAR(500) | 可空 | 头像链接 |
+| background_url | VARCHAR(500) | 可空 | 个人信息背景图链接 |
 | email | VARCHAR(100) | 唯一,可空 | 邮箱 |
 | bio | VARCHAR(255) | 可空 | 个人简介 |
 | role | VARCHAR(20) | 默认 'user' | user / admin |
@@ -59,7 +60,7 @@ erDiagram
 | created_at | TIMESTAMPTZ | 默认 now() | |
 | updated_at | TIMESTAMPTZ | 默认 now() | |
 
-> 分类种子数据（5 个）：随便聊聊 / 校园生活 / 学习交流 / 二手交易 / 社团活动。
+> 分类种子数据（8 个）：课程学业 / 校园生活 / 社团活动 / 二手闲置 / 求助问答 / 组队搭子 / 校园资讯 / 经验分享。
 
 ### posts — 帖子表
 | 字段 | 类型 | 约束 | 说明 |
@@ -87,7 +88,7 @@ erDiagram
 | created_at | TIMESTAMPTZ | 默认 now() | |
 | updated_at | TIMESTAMPTZ | 默认 now() | |
 
-> 标签种子数据（10 个）：考研 / 自习室 / 课程 / 食堂 / 社团 / 二手 / 求助 / 组队 / 活动 / 经验分享。
+> 标签种子数据（20 个）：考研 / 自习室 / 课程资料 / 选课 / 期末复习 / 食堂测评 / 宿舍生活 / 二手教材 / 电子产品 / 社团招新 / 活动报名 / 组队学习 / 运动健身 / 实习就业 / 校园通知 / 生活求助 / 经验分享 / 失物招领 / 租房 / 通勤。
 
 ### post_tags — 帖子与标签（多对多）
 | 字段 | 类型 | 约束 | 说明 |

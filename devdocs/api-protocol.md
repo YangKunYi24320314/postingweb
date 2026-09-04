@@ -115,7 +115,15 @@
 | categoryId | 按分类筛选 |
 | tag | 按标签筛选（单个标签名） |
 | keyword | 关键词搜标题+正文 |
-| sort | new(最新,默认) / hot(最热) |
+| rank | 组合排序，逗号分隔，可选 latest / hot / recommend，默认 latest |
+| sort | 兼容旧参数：new / hot；新功能建议用 rank |
+
+**排序规则**
+- `latest`：按发布时间新鲜度计分，越新的帖子分越高。
+- `hot`：按互动热度计分，公式为 `浏览数*1 + 点赞数*3 + 收藏数*4 + 评论数*5`。
+- `recommend`：按当前用户兴趣计分，浏览过的帖子标签 +1，点赞过的帖子标签 +3，收藏过的帖子标签 +4。
+- 多个排序因子可以一起使用，例如 `rank=latest,hot,recommend`，后端会把各项得分相加后排序。
+- `rank` 包含 `recommend` 时必须登录；如果用户暂无浏览/点赞/收藏记录，先按热门分兜底推荐。
 
 **响应 data**：分页结构，`list` 每项：
 ```json
@@ -174,13 +182,78 @@
 
 ### 7.1 浏览记录
 - `POST /posts/:id/view`（需登录）— 进入帖子详情时上报一次浏览
-- `GET /me/history` — 我的浏览记录（分页）
+- `GET /me/history` — 我的浏览记录（分页；可选 `keyword` 参数，对标题/正文/作者昵称做模糊匹配）
 - `DELETE /me/history` — 清空浏览记录
 
 ### 7.2 我的内容
 - `GET /me/posts` — 我发布的帖子（分页）
 - `GET /me/favorites` — 我收藏的帖子（分页）
 - `GET /me/likes` — 我点赞的帖子（分页，可选）
+
+> 三个接口都支持可选 `keyword` 参数，对标题/正文/作者昵称做模糊匹配。
+
+三个接口返回的分页列表项结构一致（复用 `Post` 结构，另含个人主页渲染专用字段）：
+
+```json
+{
+  "id": 1, "title": "标题", "categoryId": 2, "categoryName": "分类名",
+  "content": "帖子正文", "tags": ["标签1", "标签2"],
+  "author": { "id": 1, "nickname": "作者昵称" },
+  "viewCount": 10, "likeCount": 3, "favoriteCount": 2, "commentCount": 5,
+  "createdAt": "2026-09-03T08:00:00.000Z",
+  "favoritedAt": "2026-09-03T09:00:00.000Z",
+  "likedAt": "2026-09-03T10:00:00.000Z"
+}
+```
+
+> 说明：
+> - 列表项作者字段用 `author`（等价于 `Post` 结构里的 `user`，只含 `id` + `nickname`）。
+> - `content` / `categoryName` / `tags` 是个人主页卡片渲染与悬浮预览正文所需字段。
+> - `favoritedAt` 仅 `/me/favorites` 返回；`likedAt` 仅 `/me/likes` 返回，其余接口省略这两个字段。
+
+### 7.3 头像上传
+- `POST /me/avatar`（需登录）— 上传头像
+
+**请求**：`multipart/form-data`，字段名固定为 `file`（单张图片，最大 5MB）。
+
+**响应 data**：
+
+```json
+{ "url": "http://host/static/avatars/avatar-xxx.png" }
+```
+
+> 头像文件存到后端 `server/static/avatars/`，前端用返回的 `url` 直接显示（通过 `/static/avatars/...` 访问）。
+
+### 7.4 收获统计
+- `GET /me/stats`（需登录）— 我发布的帖子收获的赞/收藏总数
+
+**响应 data**：
+
+```json
+{ "totalLikes": 12, "totalFavorites": 5 }
+```
+
+> `totalLikes` = 我所有帖子的 `like_count` 之和；`totalFavorites` = 我所有帖子的 `favorite_count` 之和（只统计未删除的帖子）。
+
+### 7.5 背景图
+- `POST /me/background`（需登录）— 上传并保存个人信息背景图
+- `GET /me/background`（需登录）— 获取我的背景图
+
+**上传请求**：`multipart/form-data`，字段名固定为 `file`（单张图片，最大 5MB）。
+
+**上传响应 data**：
+
+```json
+{ "url": "http://host/static/backgrounds/bg-xxx.png" }
+```
+
+**获取响应 data**：
+
+```json
+{ "backgroundUrl": "http://host/static/backgrounds/bg-xxx.png" }
+```
+
+> 背景图文件存到后端 `server/static/backgrounds/`；`POST` 会把 `url` 直接写进 `users.background_url`。未设置自定义背景时，`GET` 返回默认背景 `/static/default-background.jpg`。
 
 ---
 
@@ -203,10 +276,15 @@
 
 ## 九、推荐（模块5，可选，二期）
 
-### 9.1 `GET /recommend/posts` — 个性化推荐（需登录）
-**请求参数**：`page` / `pageSize`
-**响应 data**：分页结构，按用户偏好的标签排序推荐。
-> 简化实现：根据用户点赞/收藏/浏览过的帖子标签统计偏好，返回偏好标签下的相似帖子。
+### 9.1 帖子广场个性化排序
+推荐能力合并在 `GET /posts` 中，通过 `rank=recommend` 或 `rank=hot,recommend` 使用。
+
+示例：
+- `GET /posts?rank=recommend`：按当前用户兴趣推荐。
+- `GET /posts?rank=latest,recommend`：综合发布时间和用户兴趣。
+- `GET /posts?categoryId=1&tag=考研&rank=hot,recommend`：先筛选分类和标签，再综合热度与兴趣排序。
+
+> 简化实现：根据用户浏览、点赞、收藏过的帖子标签统计偏好，再给带有相同标签的候选帖子加权。
 
 ---
 
