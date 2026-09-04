@@ -4,7 +4,10 @@ import fs from 'node:fs'
 
 const authApi = fs.readFileSync(new URL('../src/api/auth.js', import.meta.url), 'utf8')
 const loginView = fs.readFileSync(new URL('../src/views/LoginView.vue', import.meta.url), 'utf8')
-const profileView = fs.readFileSync(new URL('../src/views/ProfileView.vue', import.meta.url), 'utf8')
+const profileView = fs.readFileSync(
+  new URL('../src/views/ProfileView.vue', import.meta.url),
+  'utf8'
+)
 
 test('auth api exposes contact binding and password security calls', () => {
   assert.match(authApi, /sendContactCode/)

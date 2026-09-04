@@ -142,6 +142,148 @@ paths:
                     properties:
                       data: { $ref: '#/components/schemas/User' }
 
+  /auth/contact/send-code:
+    post:
+      tags: [认证]
+      summary: 发送绑定验证码
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, target]
+              properties:
+                channel: { type: string, enum: [phone, email] }
+                target: { type: string, example: 13800138000 }
+      responses:
+        '200':
+          description: 验证码已发送
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cooldownSeconds: { type: integer, example: 60 }
+                          expiresInSeconds: { type: integer, example: 300 }
+
+  /auth/contact/bind:
+    post:
+      tags: [认证]
+      summary: 绑定手机号 / 邮箱
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, target, code]
+              properties:
+                channel: { type: string, enum: [phone, email] }
+                target: { type: string, example: 13800138000 }
+                code: { type: string, example: "123456" }
+      responses:
+        '200':
+          description: 绑定成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/User' }
+
+  /auth/password/change:
+    post:
+      tags: [认证]
+      summary: 修改密码
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, format: password }
+                newPassword: { type: string, format: password, example: "newPass123" }
+      responses:
+        '200':
+          description: 修改成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/TokenUser' }
+
+  /auth/password/reset/send-code:
+    post:
+      tags: [认证]
+      summary: 发送找回密码验证码
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, target]
+              properties:
+                channel: { type: string, enum: [phone, email] }
+                target: { type: string, example: 13800138000 }
+      responses:
+        '200':
+          description: 如果账号存在，验证码将发送到对应联系方式
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          accepted: { type: boolean, example: true }
+
+  /auth/password/reset:
+    post:
+      tags: [认证]
+      summary: 使用验证码重置密码
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, target, code, newPassword]
+              properties:
+                channel: { type: string, enum: [phone, email] }
+                target: { type: string, example: 13800138000 }
+                code: { type: string, example: "123456" }
+                newPassword: { type: string, format: password, example: "newPass123" }
+      responses:
+        '200':
+          description: 重置成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/TokenUser' }
+
   # ======================= 分类 + 标签 =======================
   /categories:
     get:
@@ -803,6 +945,10 @@ components:
         avatarUrl: { type: string, nullable: true }
         bio: { type: string, nullable: true }
         role: { type: string, example: user }
+        phone: { type: string, nullable: true, example: "138****8000" }
+        phoneBound: { type: boolean, example: false }
+        email: { type: string, nullable: true, example: "x***@y.com" }
+        emailBound: { type: boolean, example: false }
 
     Category:
       type: object

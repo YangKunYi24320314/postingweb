@@ -13,7 +13,12 @@ const routes = [
     path: '/',
     component: BaseLayout,
     children: [
-      { path: '', name: 'Home', component: () => import('../views/HomeView.vue'), meta: { title: '首页' } },
+      {
+        path: '',
+        name: 'Home',
+        component: () => import('../views/HomeView.vue'),
+        meta: { title: '首页' },
+      },
       {
         path: 'post-page',
         name: 'PostPage',
@@ -58,7 +63,8 @@ const router = createRouter({ history: createWebHistory(), routes })
 
 router.beforeEach((to) => {
   if (to.name === 'Login' && getToken()) return { path: '/' }
-  if (to.meta.requiresAuth && !getToken()) return { path: '/login', query: { redirect: to.fullPath } }
+  if (to.meta.requiresAuth && !getToken())
+    return { path: '/login', query: { redirect: to.fullPath } }
 })
 
 router.afterEach((to) => {
