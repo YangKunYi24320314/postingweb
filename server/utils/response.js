@@ -1,7 +1,7 @@
 // 统一返回封装：全队所有接口都用这里的 ok / fail，保证格式一致。
 // 约定格式：{ code, message, data }，code === 0 表示成功。
 
-// 错误码常量：跟 docs/api-protocol.md 里的错误码表保持一致。
+// 错误码常量：跟 devdocs/api-protocol.md 里的错误码表保持一致。
 const CODE = {
   PARAM_ERROR: 1001, // 参数错误
   UNAUTHORIZED: 1002, // 未登录或登录失效

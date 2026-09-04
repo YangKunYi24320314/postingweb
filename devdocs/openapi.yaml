@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: PostWEB 校园社区 接口文档
-  description: 由 docs/api-protocol.md 编译。导入 Apifox 后会自动生成全部接口。
+  description: 由 devdocs/api-protocol.md 编译。导入 Apifox 后会自动生成全部接口。
   version: 1.0.0
 servers:
   - url: http://localhost:3000/api
@@ -14,7 +14,6 @@ tags:
   - name: 互动
   - name: 记录中心
   - name: 附件
-  - name: 推荐
 
 # ============================================================
 # 认证方式：JWT，请求头 Authorization: Bearer <token>
@@ -63,10 +62,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [identifier, password]
+              required: [username, password]
               properties:
-                identifier: { type: string, example: scu123 }
-                username: { type: string, description: 兼容旧客户端, deprecated: true }
+                username: { type: string, example: scu123 }
                 password: { type: string, example: "123456" }
       responses:
         '200':
@@ -109,7 +107,7 @@ paths:
               properties:
                 nickname: { type: string, nullable: true, example: 新昵称 }
                 bio: { type: string, nullable: true, example: 新的简介 }
-                avatar_url: { type: string, nullable: true, example: "https://.../a.png" }
+                avatarUrl: { type: string, nullable: true, example: "https://.../a.png" }
       responses:
         '200':
           description: 更新成功
@@ -121,91 +119,6 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: '#/components/schemas/User' }
-
-  /auth/contact/send-code:
-    post:
-      tags: [认证]
-      summary: 发送手机号或邮箱绑定验证码
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ContactTarget' }
-      responses:
-        '200':
-          description: 发送成功
-
-  /auth/contact/bind:
-    post:
-      tags: [认证]
-      summary: 校验验证码并绑定手机号或邮箱
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              allOf:
-                - $ref: '#/components/schemas/ContactTarget'
-                - type: object
-                  required: [code]
-                  properties:
-                    code: { type: string, example: "123456" }
-      responses:
-        '200':
-          description: 绑定成功
-
-  /auth/password/change:
-    post:
-      tags: [认证]
-      summary: 修改当前用户密码
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [currentPassword, newPassword]
-              properties:
-                currentPassword: { type: string, example: "123456" }
-                newPassword: { type: string, example: "654321" }
-      responses:
-        '200':
-          description: 修改成功，返回新 token
-
-  /auth/password/reset/send-code:
-    post:
-      tags: [认证]
-      summary: 发送找回密码验证码
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ContactTarget' }
-      responses:
-        '200':
-          description: 请求已受理
-
-  /auth/password/reset:
-    post:
-      tags: [认证]
-      summary: 使用验证码重置密码
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              allOf:
-                - $ref: '#/components/schemas/ContactTarget'
-                - type: object
-                  required: [code, newPassword]
-                  properties:
-                    code: { type: string, example: "123456" }
-                    newPassword: { type: string, example: "654321" }
-      responses:
-        '200':
-          description: 密码重置成功，返回 token
 
   /users/{id}:
     get:
@@ -280,7 +193,13 @@ paths:
         - { name: categoryId, in: query, schema: { type: integer } }
         - { name: tag, in: query, schema: { type: string, example: 考研 } }
         - { name: keyword, in: query, schema: { type: string, example: 自习室 } }
-        - { name: sort, in: query, schema: { type: string, enum: [new, hot], default: new } }
+        - { name: sort, in: query, schema: { type: string, enum: [new, hot], default: new }, description: 兼容旧参数，新功能建议用 rank }
+        - name: rank
+          in: query
+          description: 组合排序，逗号分隔；latest=最新，hot=热门，recommend=猜你喜欢。包含 recommend 时必须登录。
+          schema:
+            type: string
+            example: "latest,hot,recommend"
       responses:
         '200':
           description: 成功
@@ -479,7 +398,7 @@ paths:
 
   /comments/{id}/like:
     post:
-      tags: [评论]
+      tags: [互动]
       summary: 点赞评论
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer } }
@@ -495,7 +414,7 @@ paths:
                     properties:
                       data: { $ref: '#/components/schemas/LikeResult' }
     delete:
-      tags: [评论]
+      tags: [互动]
       summary: 取消点赞评论
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer } }
@@ -606,6 +525,7 @@ paths:
       parameters:
         - { name: page, in: query, schema: { type: integer, default: 1 } }
         - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+        - { name: keyword, in: query, schema: { type: string }, description: 对标题/正文/作者昵称做模糊匹配 }
       responses:
         '200':
           description: 成功
@@ -639,6 +559,7 @@ paths:
       parameters:
         - { name: page, in: query, schema: { type: integer, default: 1 } }
         - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+        - { name: keyword, in: query, schema: { type: string }, description: 对标题/正文/作者昵称做模糊匹配 }
       responses:
         '200':
           description: 成功
@@ -649,7 +570,7 @@ paths:
                   - $ref: '#/components/schemas/ApiResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/PageResult' }
+                      data: { $ref: '#/components/schemas/MyPostPageResult' }
 
   /me/favorites:
     get:
@@ -658,6 +579,7 @@ paths:
       parameters:
         - { name: page, in: query, schema: { type: integer, default: 1 } }
         - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+        - { name: keyword, in: query, schema: { type: string }, description: 对标题/正文/作者昵称做模糊匹配 }
       responses:
         '200':
           description: 成功
@@ -668,7 +590,7 @@ paths:
                   - $ref: '#/components/schemas/ApiResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/PageResult' }
+                      data: { $ref: '#/components/schemas/MyPostPageResult' }
 
   /me/likes:
     get:
@@ -677,6 +599,7 @@ paths:
       parameters:
         - { name: page, in: query, schema: { type: integer, default: 1 } }
         - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+        - { name: keyword, in: query, schema: { type: string }, description: 对标题/正文/作者昵称做模糊匹配 }
       responses:
         '200':
           description: 成功
@@ -687,7 +610,104 @@ paths:
                   - $ref: '#/components/schemas/ApiResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/PageResult' }
+                      data: { $ref: '#/components/schemas/MyPostPageResult' }
+
+  /me/avatar:
+    post:
+      tags: [记录中心]
+      summary: 上传头像（multipart/form-data，字段 file，最大5MB）
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          url: { type: string, example: "http://host/static/avatars/avatar-xxx.png" }
+
+  /me/stats:
+    get:
+      tags: [记录中心]
+      summary: 我的收获统计（获赞总数 / 获收藏总数）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalLikes: { type: integer, example: 12 }
+                          totalFavorites: { type: integer, example: 5 }
+
+  /me/background:
+    post:
+      tags: [记录中心]
+      summary: 上传并保存个人信息背景图（multipart/form-data，字段 file，最大5MB）
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          url: { type: string, example: "http://host/static/backgrounds/bg-xxx.png" }
+    get:
+      tags: [记录中心]
+      summary: 获取我的背景图
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          backgroundUrl: { type: string, nullable: true, example: "http://host/static/backgrounds/bg-xxx.png" }
 
   # ======================= 附件 =======================
   /attachments/upload:
@@ -732,26 +752,6 @@ paths:
               schema:
                 type: string
                 format: binary
-
-  # ======================= 推荐（二期可选） =======================
-  /recommend/posts:
-    get:
-      tags: [推荐]
-      summary: 个性化推荐帖子
-      parameters:
-        - { name: page, in: query, schema: { type: integer, default: 1 } }
-        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
-      responses:
-        '200':
-          description: 成功
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data: { $ref: '#/components/schemas/PageResult' }
 
 # ============================================================
 # 可复用的数据类型
@@ -800,20 +800,9 @@ components:
         id: { type: integer }
         username: { type: string }
         nickname: { type: string, nullable: true }
-        avatar_url: { type: string, nullable: true }
+        avatarUrl: { type: string, nullable: true }
         bio: { type: string, nullable: true }
         role: { type: string, example: user }
-        phone: { type: string, nullable: true, example: "138****8000" }
-        email: { type: string, nullable: true, example: "u***@example.com" }
-        phoneBound: { type: boolean }
-        emailBound: { type: boolean }
-
-    ContactTarget:
-      type: object
-      required: [channel, target]
-      properties:
-        channel: { type: string, enum: [phone, email] }
-        target: { type: string, example: 13800138000 }
 
     Category:
       type: object
@@ -842,6 +831,37 @@ components:
         isFavorite: { type: boolean }
         isPinned: { type: boolean }
         createdAt: { type: string, format: date-time }
+
+    MyPostItem:
+      type: object
+      description: 记录中心「我的内容」列表项（/me/posts、/me/favorites、/me/likes）
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        categoryId: { type: integer, nullable: true }
+        categoryName: { type: string, nullable: true }
+        content: { type: string }
+        tags: { type: array, items: { type: string } }
+        author:
+          type: object
+          properties:
+            id: { type: integer }
+            nickname: { type: string, nullable: true }
+        viewCount: { type: integer }
+        likeCount: { type: integer }
+        favoriteCount: { type: integer }
+        commentCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        favoritedAt: { type: string, format: date-time, nullable: true }
+        likedAt: { type: string, format: date-time, nullable: true }
+
+    MyPostPageResult:
+      type: object
+      properties:
+        list: { type: array, items: { $ref: '#/components/schemas/MyPostItem' } }
+        total: { type: integer, example: 100 }
+        page: { type: integer, example: 1 }
+        pageSize: { type: integer, example: 10 }
 
     Comment:
       type: object

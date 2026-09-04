@@ -40,6 +40,7 @@ erDiagram
 | password_hash | VARCHAR(255) | 非空 | 加密后的密码 |
 | nickname | VARCHAR(50) | 可空 | 显示昵称 |
 | avatar_url | VARCHAR(500) | 可空 | 头像链接 |
+| background_url | TEXT | 可空 | 个人主页背景图（新增，个人中心模块） |
 | email | VARCHAR(100) | 唯一,可空 | 邮箱 |
 | phone | VARCHAR(20) | 唯一,可空 | 中国大陆手机号 |
 | bio | VARCHAR(255) | 可空 | 个人简介 |
@@ -75,7 +76,7 @@ erDiagram
 | created_at | TIMESTAMPTZ | 默认 now() | |
 | updated_at | TIMESTAMPTZ | 默认 now() | |
 
-> 分类种子数据（5 个）：随便聊聊 / 校园生活 / 学习交流 / 二手交易 / 社团活动。
+> 分类种子数据（8 个）：课程学业 / 校园生活 / 社团活动 / 二手闲置 / 求助问答 / 组队搭子 / 校园资讯 / 经验分享。
 
 ### posts — 帖子表
 | 字段 | 类型 | 约束 | 说明 |
@@ -103,7 +104,7 @@ erDiagram
 | created_at | TIMESTAMPTZ | 默认 now() | |
 | updated_at | TIMESTAMPTZ | 默认 now() | |
 
-> 标签种子数据（10 个）：考研 / 自习室 / 课程 / 食堂 / 社团 / 二手 / 求助 / 组队 / 活动 / 经验分享。
+> 标签种子数据（20 个）：考研 / 自习室 / 课程资料 / 选课 / 期末复习 / 食堂测评 / 宿舍生活 / 二手教材 / 电子产品 / 社团招新 / 活动报名 / 组队学习 / 运动健身 / 实习就业 / 校园通知 / 生活求助 / 经验分享 / 失物招领 / 租房 / 通勤。
 
 ### post_tags — 帖子与标签（多对多）
 | 字段 | 类型 | 约束 | 说明 |
@@ -199,4 +200,4 @@ erDiagram
 3. **唯一约束防重复**：点赞、收藏靠 `UNIQUE` 拦重复；浏览记录靠 `UNIQUE(user_id, post_id)` 让同一帖子只留一条。
 4. **外键删帖级联**：删帖子时其点赞/收藏/评论/标签关联一起清（`ON DELETE CASCADE`）。
 5. **时间统一用 TIMESTAMPTZ**，存 `now()`，前端再按需格式化。
-6. **可执行脚本**：`docs/campushub_schema.sql` 是这套结构的可直接执行版本（含索引、CHECK 约束、种子数据），文档与脚本必须保持一致。
+6. **可执行脚本**：`devdocs/campushub_schema.sql` 是这套结构的可直接执行版本（含索引、CHECK 约束、种子数据），文档与脚本必须保持一致。

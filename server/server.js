@@ -2,6 +2,7 @@
 const express = require('express')
 const cors = require('cors')
 const fs = require('fs')
+const multer = require('multer')
 const path = require('path')
 require('dotenv').config()
 
@@ -9,20 +10,38 @@ const { ok, fail, CODE } = require('./utils/response')
 const { UPLOAD_DIR } = require('./utils/avatar-upload')
 
 const app = express()
+const clientDist = path.join(__dirname, '..', 'client', 'dist')
+const legacyUploadDir = path.join(__dirname, 'static')
 
-// 让服务器能解析 JSON 请求体、允许前端跨域访问
-app.use(express.json())
+app.use(express.json({ charset: 'utf-8' }))
 app.use(cors())
 app.use('/uploads', express.static(UPLOAD_DIR))
+app.use('/static', express.static(path.join(__dirname, 'static')))
 
-// 简单连通性测试
+const legacyUpload = multer({
+  storage: multer.diskStorage({
+    destination: legacyUploadDir,
+    filename: (req, file, callback) => {
+      const extension = path.extname(file.originalname).toLowerCase()
+      callback(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`)
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, callback) => {
+    const allowed = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+    callback(null, allowed.has(file.mimetype))
+  },
+})
+
+app.post('/upload', legacyUpload.single('file'), (req, res) => {
+  if (!req.file) return fail(res, CODE.PARAM_ERROR, '没有接收到图片')
+  return ok(res, { url: `${req.protocol}://${req.get('host')}/static/${req.file.filename}` })
+})
+
 app.get('/api/hello', (req, res) => {
   ok(res, { message: 'Hello from backend!' })
 })
 
-// 自动加载 routes/ 下所有路由文件：
-// 每人在 routes/ 里放一个文件、导出 express.Router()，路由路径以 / 开头（如 /auth/login）。
-// 这里统一把它们挂到 /api 前缀下。好处：加新模块完全不用改这个文件，避免多人改动在 server.js 打架。
 const routesDir = path.join(__dirname, 'routes')
 fs.readdirSync(routesDir)
   .filter((file) => file.endsWith('.js'))
@@ -31,22 +50,28 @@ fs.readdirSync(routesDir)
     app.use('/api', routeModule)
   })
 
-// 没匹配到任何路由 → 404
-app.use((req, res) => {
+app.use('/api', (req, res) => {
   fail(res, CODE.NOT_FOUND, '接口不存在', 404)
 })
 
-// 统一错误处理：任何 async 路由抛错都会走到这里（Express 5 自动捕获）
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist))
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api')) return next()
+    if (req.method !== 'GET') return next()
+    return res.sendFile(path.join(clientDist, 'index.html'))
+  })
+}
+
 app.use((err, req, res, next) => {
   console.error(err)
-  // body-parser 解析失败（如 JSON 格式错）属于客户端问题，返回 4xx 而不是 500
   if (err.status && err.status < 500) {
     return fail(res, CODE.PARAM_ERROR, '请求格式错误', err.status)
   }
-  fail(res, CODE.SERVER_ERROR, '服务器内部错误', 500)
+  return fail(res, CODE.SERVER_ERROR, '服务器内部错误', 500)
 })
 
-const PORT = process.env.PORT || 3000
+const PORT = Number(process.env.PORT || 3000)
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`)
 })

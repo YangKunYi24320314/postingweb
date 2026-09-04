@@ -7,6 +7,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test test/*.test.js",
+    "migrate:post-attachments": "node scripts/migrate-post-attachments.js",
+    "serve:lan": "powershell -NoProfile -ExecutionPolicy Bypass -File serve-lan.ps1",
     "format": "prettier --write ."
   },
   "keywords": [],

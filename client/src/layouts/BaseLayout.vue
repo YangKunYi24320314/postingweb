@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotRound } from '@element-plus/icons-vue'
+import { ChatDotRound, EditPen } from '@element-plus/icons-vue'
+import { Github, LifeBuoy, Mail } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 import { clearToken, getToken } from '../api/request'
 import { getAuthAction, logout } from '../utils/auth-navigation'
@@ -9,12 +10,15 @@ import { getAuthAction, logout } from '../utils/auth-navigation'
 const route = useRoute()
 const router = useRouter()
 const authAction = computed(() => getAuthAction(getToken()))
+const repositoryUrl = 'https://github.com/YangKunYi24320314/postingweb'
+const contactEmail = '205613196@qq.com'
+const teamMailto = `mailto:${contactEmail}?subject=团队联系`
+const feedbackMailto = `mailto:${contactEmail}?subject=建议与投诉`
 
-// 侧边/顶部导航当前激活的菜单项（用当前路由路径匹配）
 const activeMenu = computed(() => route.path)
-
 const menuItems = [
   { index: '/', label: '首页', icon: ChatDotRound },
+  { index: '/post-page', label: '帖子广场', icon: EditPen },
 ]
 
 function handleAuthAction() {
@@ -39,8 +43,13 @@ function handleLogout() {
           <span class="layout__logo-text">校园社区</span>
         </router-link>
 
-        <!-- 顶部导航：index=路由地址，router 属性让点击自动跳转 -->
-        <el-menu :default-active="activeMenu" mode="horizontal" router class="layout__menu">
+        <el-menu
+          :default-active="activeMenu"
+          mode="horizontal"
+          router
+          :ellipsis="false"
+          class="layout__menu"
+        >
           <el-menu-item v-for="item in menuItems" :key="item.index" :index="item.index">
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
@@ -54,7 +63,6 @@ function handleLogout() {
           <el-button v-if="authAction.path === '/profile'" link type="info" @click="handleLogout">
             退出登录
           </el-button>
-          <!-- TODO：有用户信息后，替换成头像下拉菜单 -->
         </div>
       </div>
     </el-header>
@@ -63,7 +71,48 @@ function handleLogout() {
       <router-view />
     </el-main>
 
-    <el-footer class="layout__footer"> 校园发帖社区 · 第1组 · © 2026 </el-footer>
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <div class="site-footer__brand">
+          <div class="site-footer__brand-mark" aria-hidden="true">C</div>
+          <div>
+            <p class="site-footer__brand-name">校园社区</p>
+            <p class="site-footer__tagline">分享校园生活，记录真实交流</p>
+          </div>
+        </div>
+
+        <nav class="site-footer__column" aria-label="产品">
+          <h2>产品</h2>
+          <a
+            :href="repositoryUrl"
+            target="_blank"
+            rel="noreferrer"
+            class="site-footer__link"
+            aria-label="打开 GitHub 项目仓库"
+          >
+            <Github :size="17" aria-hidden="true" />
+            <span>GitHub</span>
+          </a>
+        </nav>
+
+        <nav class="site-footer__column" aria-label="关于">
+          <h2>关于</h2>
+          <a :href="teamMailto" class="site-footer__link">
+            <Mail :size="17" aria-hidden="true" />
+            <span>团队</span>
+          </a>
+        </nav>
+
+        <nav class="site-footer__column" aria-label="帮助">
+          <h2>帮助</h2>
+          <a :href="feedbackMailto" class="site-footer__link">
+            <LifeBuoy :size="17" aria-hidden="true" />
+            <span>建议与投诉</span>
+          </a>
+        </nav>
+      </div>
+      <div class="site-footer__bottom">校园发帖社区 · 第1组 · © 2026</div>
+    </footer>
   </el-container>
 </template>
 
@@ -97,17 +146,22 @@ function handleLogout() {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.layout__logo-dot,
+.site-footer__brand-mark {
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--brand-gradient);
+  color: var(--bg-white);
+  font-weight: 700;
 }
 
 .layout__logo-dot {
   width: 34px;
   height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-md);
-  background: var(--brand-gradient);
-  color: #fff;
-  font-weight: 700;
 }
 
 .layout__logo-text {
@@ -124,12 +178,105 @@ function handleLogout() {
 }
 
 .layout__main {
+  flex: 1;
   padding: 0;
 }
 
-.layout__footer {
-  text-align: center;
-  color: var(--text-secondary);
+.site-footer {
+  background: var(--footer-bg);
+  color: var(--footer-text);
+}
+
+.site-footer__inner {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.7fr) repeat(3, minmax(120px, 1fr));
+  gap: var(--space-2xl);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-2xl) var(--space-md);
+}
+
+.site-footer__brand {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.site-footer__brand-mark {
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+}
+
+.site-footer__brand-name {
+  color: var(--footer-heading);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.site-footer__tagline {
+  margin-top: var(--space-xs);
+  color: var(--footer-muted);
   font-size: 13px;
+}
+
+.site-footer__column h2 {
+  margin-bottom: var(--space-md);
+  color: var(--footer-heading);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.site-footer__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--footer-text);
+  font-size: 14px;
+  line-height: 1.5;
+  transition: color 160ms ease;
+}
+
+.site-footer__link:hover,
+.site-footer__link:focus-visible {
+  color: var(--footer-link-hover);
+}
+
+.site-footer__link:focus-visible {
+  outline: 2px solid var(--footer-focus);
+  outline-offset: 4px;
+}
+
+.site-footer__bottom {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-md);
+  border-top: 1px solid var(--footer-border);
+  color: var(--footer-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .layout__inner {
+    padding: 0 var(--space-sm);
+  }
+
+  .layout__menu {
+    margin: 0 var(--space-sm);
+  }
+
+  .layout__logo-text {
+    display: none;
+  }
+
+  .site-footer__inner {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg) var(--space-md);
+  }
+
+  .site-footer__brand {
+    grid-column: 1 / -1;
+  }
 }
 </style>
