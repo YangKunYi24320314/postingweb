@@ -2,9 +2,14 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, View, ChatDotRound, Pointer } from '@element-plus/icons-vue'
+// 导入路由读取方法，用于获取URL中的页码参数
+import { useRoute } from 'vue-router'
 import { getPostList } from '../api/post'
 import { getCategories } from '../api/catalog'
 import InteractionButtons from '../components/InteractionButtons.vue'
+
+// 获取当前路由实例
+const route = useRoute()
 
 // 列表数据
 const list = ref([])
@@ -12,7 +17,6 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
 const loading = ref(false)
-
 // 筛选条件
 const categories = ref([]) // 分类下拉数据
 const filters = ref({
@@ -91,6 +95,12 @@ function handlePageChange(p) {
 }
 
 onMounted(async () => {
+  // 从URL读取页码，有合法值就直接定位到对应页
+  const queryPage = parseInt(route.query.page)
+  if (queryPage && queryPage > 0) {
+    page.value = queryPage
+  }
+
   loadList()
   try {
     categories.value = await getCategories()
@@ -147,8 +157,11 @@ onMounted(async () => {
       <el-empty v-if="!loading && list.length === 0" description="暂无帖子" />
       <div v-for="item in list" :key="item.id" class="post-card">
         <div class="post-card__head">
-          <!-- 点击标题跳转详情页 -->
-          <router-link :to="`/post/${item.id}`" class="post-card__title-link">
+          <!-- 点击标题跳转详情页，携带当前分页页码 -->
+          <router-link
+            :to="{ path: `/post/${item.id}`, query: { page: page } }"
+            class="post-card__title-link"
+          >
             <h3 class="post-card__title">{{ item.title }}</h3>
           </router-link>
           <span class="post-card__category">{{ categoryName(item.categoryId) }}</span>
@@ -187,6 +200,7 @@ onMounted(async () => {
           />
         </div>
       </div>
+
       <el-pagination
         v-model:current-page="page"
         class="post-list__pagination"
@@ -287,8 +301,7 @@ onMounted(async () => {
   margin-top: var(--space-md);
   justify-content: flex-end;
 }
-
-/* 新增：标题跳转链接样式 */
+/* 标题跳转链接样式 */
 .post-card__title-link {
   text-decoration: none;
   color: inherit;

@@ -5,19 +5,16 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Pointer } from '@element-plus/icons-vue'
-
 import { getPostById, deletePost } from '../api/post'
 import { getComments, createComment } from '../api/comments'
 import { reportView } from '../api/record'
 import { getMe } from '../api/auth'
 import { getToken } from '../api/request'
-
 import InteractionButtons from '../components/InteractionButtons.vue'
 import CommentItem from '../components/CommentItem.vue'
 
 const route = useRoute()
 const router = useRouter()
-
 // 从路由参数取出帖子 id（如 /post/3 -> 3）
 const postId = computed(() => Number(route.params.id))
 const post = ref(null)
@@ -26,7 +23,6 @@ const myUserId = ref(null)
 const me = ref(null)
 const loading = ref(false)
 const commentsLoading = ref(false)
-
 // 顶级评论输入框
 const newContent = ref('')
 const submitting = ref(false)
@@ -143,6 +139,8 @@ function handlePreview(file) {
   // 去掉开头所有多余斜杠，统一加一个 /，保证是标准根相对路径
   const fileUrl = '/' + file.file_path.replace(/^\/+/, '')
   currentPreviewUrl.value = fileUrl
+  // 【补上这行】拼接完整的绝对地址
+  const fullFileUrl = window.location.origin + fileUrl
 
   const type = file.mime_type
   if (type.startsWith('image/')) {
@@ -151,7 +149,20 @@ function handlePreview(file) {
     pdfVisible.value = true
   } else if (type.startsWith('video/')) {
     videoVisible.value = true
-  } else {
+  } 
+  // Office文档用微软在线预览 目前我们的地址微软无法访问，docx文件无法在线预览
+  else if (
+    type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    type === 'application/msword' ||
+    type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  ) {
+    window.open(
+      `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fullFileUrl)}`,
+      '_blank'
+    )
+  }
+  else {
     // 不支持在线预览的格式，自动触发下载
     handleDownload(file)
   }
@@ -160,6 +171,18 @@ function handlePreview(file) {
 // ===== 独立下载功能：走原下载接口 =====
 function handleDownload(file) {
   window.open(`/api/attachments/${file.id}/download`, '_blank')
+}
+
+// ===== 返回帖子列表，保留分页页码 =====
+const goBack = () => {
+  const fromPage = route.query.page
+  if (fromPage) {
+    // 有来源页码，精准跳回对应分页
+    router.push({ path: '/post-page', query: { page: fromPage } })
+  } else {
+    // 没有来源页码，默认回到第1页
+    router.push('/post-page')
+  }
 }
 
 // 删除帖子（软删除，仅作者或管理员，删除后回到帖子广场）
@@ -225,6 +248,13 @@ onMounted(async () => {
   <div class="page-container">
     <el-card v-loading="loading" shadow="never" class="detail-card">
       <template v-if="post">
+        <!-- 返回按钮栏 -->
+        <div class="back-bar">
+          <el-button type="primary" text @click="goBack">
+            ← 返回帖子列表
+          </el-button>
+        </div>
+
         <div class="detail-card__head">
           <h2 class="detail-card__title">{{ post.title }}</h2>
           <span v-if="post.isPinned" class="detail-card__pin">置顶</span>
@@ -324,7 +354,6 @@ onMounted(async () => {
     <!-- 评论区 -->
     <el-card shadow="never" class="comment-card">
       <h3 class="comment-card__title">评论 ({{ post?.commentCount || 0 }})</h3>
-
       <!-- 发表评论 -->
       <div class="comment-card__input">
         <el-input
@@ -337,7 +366,6 @@ onMounted(async () => {
           <el-button type="primary" :loading="submitting" @click="submitComment">发表评论</el-button>
         </div>
       </div>
-
       <!-- 评论列表 -->
       <div v-loading="commentsLoading" class="comment-card__list">
         <el-empty
@@ -361,6 +389,9 @@ onMounted(async () => {
 .detail-card {
   padding: var(--space-lg);
   margin-bottom: var(--space-md);
+}
+.back-bar {
+  margin-bottom: 16px;
 }
 .detail-card__head {
   display: flex;
@@ -415,7 +446,6 @@ onMounted(async () => {
   color: var(--text-primary);
   font-weight: 500;
 }
-
 /* ===== 附件列表样式 ===== */
 .attach-list {
   display: flex;
@@ -465,7 +495,6 @@ onMounted(async () => {
   color: var(--text-secondary);
   font-size: 13px;
 }
-
 .detail-card__stats {
   display: flex;
   align-items: center;
@@ -483,7 +512,6 @@ onMounted(async () => {
   color: var(--text-secondary);
   font-size: 13px;
 }
-
 .comment-card {
   padding: var(--space-lg);
 }

@@ -114,8 +114,8 @@ async function loadOptions() {
           getCategories(),
           getTags()
       ])
-      categories.value = catRes.data || []
-      tagList.value = tagRes.data || []
+      categories.value = catRes || []
+      tagList.value = tagRes || []
   } catch (e) {
       console.error('加载分类/标签失败', e)
   }
