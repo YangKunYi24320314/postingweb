@@ -164,11 +164,7 @@ watch(
         @keyup.enter="handleFilterChange"
         @clear="clearSearch"
       />
-      <el-radio-group
-        v-model="filters.rank"
-        class="filter-bar__rank"
-        @change="handleFilterChange"
-      >
+      <el-radio-group v-model="filters.rank" class="filter-bar__rank" @change="handleFilterChange">
         <el-radio-button value="latest">最新</el-radio-button>
         <el-radio-button value="hot">热门</el-radio-button>
         <el-radio-button value="recommend">猜你喜欢</el-radio-button>
@@ -209,9 +205,15 @@ watch(
         <!-- 数据 + 互动按钮 -->
         <div class="post-card__stats">
           <div class="post-card__counts">
-            <span><el-icon><View /></el-icon> {{ item.viewCount }}</span>
-            <span><el-icon><ChatDotRound /></el-icon> {{ item.commentCount }}</span>
-            <span><el-icon><Pointer /></el-icon> {{ item.likeCount }}</span>
+            <span
+              ><el-icon><View /></el-icon> {{ item.viewCount }}</span
+            >
+            <span
+              ><el-icon><ChatDotRound /></el-icon> {{ item.commentCount }}</span
+            >
+            <span
+              ><el-icon><Pointer /></el-icon> {{ item.likeCount }}</span
+            >
           </div>
           <InteractionButtons
             :post-id="item.id"

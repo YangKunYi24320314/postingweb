@@ -14,7 +14,7 @@ export function getPostList(params) {
 export function getPostById(id) {
   return request({
     url: `/posts/${id}`,
-    method: 'get'
+    method: 'get',
   })
 }
 
@@ -23,7 +23,7 @@ export function createPost(data) {
   return request({
     url: '/posts',
     method: 'post',
-    data
+    data,
   })
 }
 
@@ -32,7 +32,7 @@ export function updatePost(id, data) {
   return request({
     url: `/posts/${id}`,
     method: 'put',
-    data
+    data,
   })
 }
 
@@ -40,7 +40,7 @@ export function updatePost(id, data) {
 export function deletePost(id) {
   return request({
     url: `/posts/${id}`,
-    method: 'delete'
+    method: 'delete',
   })
 }
 
@@ -51,7 +51,7 @@ export function uploadAttachment(formData) {
     method: 'post',
     data: formData,
     headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+      'Content-Type': 'multipart/form-data',
+    },
   })
 }

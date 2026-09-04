@@ -49,7 +49,13 @@ onMounted(loadRecent)
       <el-button type="primary" plain :icon="Clock" @click="goHistory">查看浏览历史</el-button>
     </div>
 
-    <el-table v-loading="loading" :data="list" empty-text="暂无浏览记录" size="small" @row-click="goPost">
+    <el-table
+      v-loading="loading"
+      :data="list"
+      empty-text="暂无浏览记录"
+      size="small"
+      @row-click="goPost"
+    >
       <el-table-column prop="title" label="帖子标题" min-width="180" />
       <el-table-column label="作者" width="110">
         <template #default="{ row }">{{ row.author?.nickname || '匿名用户' }}</template>

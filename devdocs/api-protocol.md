@@ -79,6 +79,27 @@
 ### 2.5 `GET /users/:id` — 查看某用户公开信息（无需登录）
 **响应 data**：该用户的 id / nickname / avatarUrl / bio / post 数量。
 
+### 2.6 `POST /auth/contact/send-code` — 发送绑定验证码（需登录）
+**请求**：`{ "channel": "phone" | "email", "target": "13800138000 | x@y.com" }`
+**响应 data**：`{ "cooldownSeconds": 60, "expiresInSeconds": 300 }`（60 秒内不可重发，验证码 5 分钟有效）
+
+### 2.7 `POST /auth/contact/bind` — 绑定手机号 / 邮箱（需登录）
+**请求**：`{ "channel": "phone" | "email", "target": "...", "code": "123456" }`
+**响应 data**：绑定后的用户信息（含 `phone` / `phoneBound` / `email` / `emailBound`）。
+> 同一联系方式已被其他账号绑定会返回 `1005` 冲突。
+
+### 2.8 `POST /auth/password/change` — 修改密码（需登录）
+**请求**：`{ "currentPassword": "旧密码", "newPassword": "新密码" }`（新密码不少于 6 位，且不能与当前密码相同）
+**响应 data**：`{ "token": "...", "user": {...} }`（改密后重新签发 token，前端需更新保存）
+
+### 2.9 `POST /auth/password/reset/send-code` — 发送找回密码验证码（无需登录）
+**请求**：`{ "channel": "phone" | "email", "target": "..." }`
+**响应 data**：`{ "accepted": true }`（为防账号探测，无论账号是否存在都返回成功，验证码只发到已绑定的联系方式）
+
+### 2.10 `POST /auth/password/reset` — 使用验证码重置密码（无需登录）
+**请求**：`{ "channel": "phone" | "email", "target": "...", "code": "123456", "newPassword": "新密码" }`
+**响应 data**：`{ "token": "...", "user": {...} }`（重置成功即签发 token）。
+
 ---
 
 ## 三、分类 + 标签（帖子用）

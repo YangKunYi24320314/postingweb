@@ -113,7 +113,7 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 - **错误码**：`1001`参数错误/`1002`未登录或token失效/`1003`无权限/`1004`资源不存在/`1005`冲突重复/`5000`服务器错误。
 - **分页**：请求 `page`(默认1) `pageSize`(默认10)；返回 `data = { list, total, page, pageSize }`。
 - **主要接口**：
-  - 认证：`POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/me`、`PUT /api/auth/profile`
+  - 认证：`POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/me`、`PUT /api/auth/profile`、`POST /api/auth/contact/send-code`、`POST /api/auth/contact/bind`、`POST /api/auth/password/change`、`POST /api/auth/password/reset/send-code`、`POST /api/auth/password/reset`
   - 用户：`GET /api/users/:id`（公开信息，无需登录）
   - 分类/标签：`GET /api/categories`、`GET /api/tags`
   - 帖子：`GET/POST /api/posts`（列表支持 `rank` 组合排序：latest/hot/recommend）、`GET/PUT/DELETE /api/posts/{id}`
@@ -123,7 +123,8 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
   - 个人中心：`POST /api/me/avatar`（传 `file`）、`GET /api/me/stats`（获赞/收藏总数）、`POST|GET /api/me/background`（背景图）
   - 附件：`POST /api/attachments/upload`（需登录）、`GET /api/attachments/{id}/download`（公开）
   - 其他：`POST /api/upload`（旧版通用图片上传，保留但**不在契约内**）；推荐已并入 `GET /api/posts?rank=recommend`，无独立 `/api/recommend/posts` 接口
-- **数据库核心表**：`users`、`categories`、`posts`、`tags`、`post_tags`、`post_attachments`、`comments`、`post_likes`、`comment_likes`、`favorites`、`histories`（+ 可选的 `user_tag_preferences`）。
+- **数据库核心表**：`users`、`categories`、`posts`、`tags`、`post_tags`、`post_attachments`、`comments`、`post_likes`、`comment_likes`、`favorites`、`histories`、`verification_codes`（绑定/找回密码用）+ 可选的 `user_tag_preferences`。
+- **关于联系方式验证码**：`users` 表含 `phone` 列，绑定手机号/邮箱与找回密码走 `verification_codes`（只存验证码哈希）。**已有旧库**需先执行一次迁移 `devdocs/migrations/2026-09-03-contact-auth.sql`（幂等，可重复执行），新库跑 `devdocs/campushub_schema.sql` 已自带这些列/表。
 - **关键业务规则**：帖子**软删除**（`is_deleted`）；帖子表 `*_count` 计数在写入时同事务更新（别每次 COUNT）；点赞/收藏/浏览记录用唯一约束防重复。
 - **关于上传**：附件已进契约：数据库有 `post_attachments` 表，接口为 `/api/attachments/upload`（`multipart/form-data`，字段固定为 `file`）和 `/api/attachments/{id}/download`；文件存后端 `server/static/attachments/`。上传返回 `{ id, original_filename, file_size }`，`post_id` 初始为空（暂存），要绑定帖子需自行写更新逻辑。注意：旧版 `POST /api/upload` 不在契约内，别混用。
 

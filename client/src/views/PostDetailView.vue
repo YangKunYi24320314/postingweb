@@ -149,7 +149,7 @@ function handlePreview(file) {
     pdfVisible.value = true
   } else if (type.startsWith('video/')) {
     videoVisible.value = true
-  } 
+  }
   // Office文档用微软在线预览 目前我们的地址微软无法访问，docx文件无法在线预览
   else if (
     type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
@@ -161,8 +161,7 @@ function handlePreview(file) {
       `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fullFileUrl)}`,
       '_blank'
     )
-  }
-  else {
+  } else {
     // 不支持在线预览的格式，自动触发下载
     handleDownload(file)
   }
@@ -250,9 +249,7 @@ onMounted(async () => {
       <template v-if="post">
         <!-- 返回按钮栏 -->
         <div class="back-bar">
-          <el-button type="primary" text @click="goBack">
-            ← 返回帖子列表
-          </el-button>
+          <el-button type="primary" text @click="goBack"> ← 返回帖子列表 </el-button>
         </div>
 
         <div class="detail-card__head">
@@ -294,11 +291,7 @@ onMounted(async () => {
         <div v-if="post.attachments && post.attachments.length" class="detail-card__attach">
           <h4>📎 附件</h4>
           <div class="attach-list">
-            <div
-              v-for="file in post.attachments"
-              :key="file.id"
-              class="attach-item"
-            >
+            <div v-for="file in post.attachments" :key="file.id" class="attach-item">
               <!-- 左侧：图标+文件名，点击触发预览 -->
               <div class="attach-info" @click="handlePreview(file)">
                 <span class="attach-icon">{{ getFileIcon(file.mime_type) }}</span>
@@ -307,12 +300,7 @@ onMounted(async () => {
               <!-- 右侧：文件大小 + 下载按钮 -->
               <div class="attach-actions">
                 <span class="attach-size">{{ formatFileSize(file.file_size) }}</span>
-                <el-button
-                  type="primary"
-                  size="small"
-                  text
-                  @click.stop="handleDownload(file)"
-                >
+                <el-button type="primary" size="small" text @click.stop="handleDownload(file)">
                   下载
                 </el-button>
               </div>
@@ -324,7 +312,7 @@ onMounted(async () => {
         <el-dialog v-model="imageVisible" width="80%" top="5vh" :show-close="true">
           <img
             :src="currentPreviewUrl"
-            style="max-width: 100%; max-height: 80vh; display: block; margin: 0 auto;"
+            style="max-width: 100%; max-height: 80vh; display: block; margin: 0 auto"
             alt="图片预览"
           />
         </el-dialog>
@@ -333,22 +321,20 @@ onMounted(async () => {
         <el-dialog v-model="pdfVisible" width="90%" top="5vh">
           <iframe
             :src="currentPreviewUrl"
-            style="width: 100%; height: 80vh; border: none; background: #fff;"
+            style="width: 100%; height: 80vh; border: none; background: #fff"
             frameborder="0"
           />
         </el-dialog>
 
         <!-- 视频预览弹窗 -->
         <el-dialog v-model="videoVisible" width="80%" top="5vh">
-          <video
-            :src="currentPreviewUrl"
-            controls
-            style="width: 100%;"
-          />
+          <video :src="currentPreviewUrl" controls style="width: 100%" />
         </el-dialog>
 
         <div class="detail-card__stats">
-          <span><el-icon><Pointer /></el-icon> 浏览 {{ post.viewCount }}</span>
+          <span
+            ><el-icon><Pointer /></el-icon> 浏览 {{ post.viewCount }}</span
+          >
           <InteractionButtons
             :post-id="post.id"
             :liked="post.isLiked"
@@ -372,7 +358,9 @@ onMounted(async () => {
           :placeholder="getToken() ? '友善评论，理性发言...' : '登录后才能发表评论'"
         />
         <div class="comment-card__input-actions">
-          <el-button type="primary" :loading="submitting" @click="submitComment">发表评论</el-button>
+          <el-button type="primary" :loading="submitting" @click="submitComment"
+            >发表评论</el-button
+          >
         </div>
       </div>
       <!-- 评论列表 -->

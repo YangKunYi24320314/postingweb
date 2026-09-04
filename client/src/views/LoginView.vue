@@ -113,12 +113,32 @@ async function handleResetPassword() {
         </el-form-item>
         <p v-if="isRegister" class="login__register-hint">手机号和邮箱请绑定后登录，不能直接注册</p>
         <el-form-item>
-          <el-input v-model="form.password" type="password" placeholder="密码" show-password size="large" autocomplete="current-password" />
+          <el-input
+            v-model="form.password"
+            type="password"
+            placeholder="密码"
+            show-password
+            size="large"
+            autocomplete="current-password"
+          />
         </el-form-item>
         <el-form-item v-if="isRegister">
-          <el-input v-model="form.confirmPassword" type="password" placeholder="确认密码" show-password size="large" autocomplete="new-password" />
+          <el-input
+            v-model="form.confirmPassword"
+            type="password"
+            placeholder="确认密码"
+            show-password
+            size="large"
+            autocomplete="new-password"
+          />
         </el-form-item>
-        <el-button type="primary" size="large" class="login__btn" :loading="loading" native-type="submit">
+        <el-button
+          type="primary"
+          size="large"
+          class="login__btn"
+          :loading="loading"
+          native-type="submit"
+        >
           {{ pageTitle }}
         </el-button>
         <div class="login__links">
@@ -144,18 +164,29 @@ async function handleResetPassword() {
         <el-form-item label="验证码">
           <div class="login__code-row">
             <el-input v-model="resetForm.code" maxlength="6" />
-            <el-button :disabled="resetCodeCountdown > 0" :loading="resetCodeLoading" @click="handleSendResetCode">
+            <el-button
+              :disabled="resetCodeCountdown > 0"
+              :loading="resetCodeLoading"
+              @click="handleSendResetCode"
+            >
               {{ resetCodeCountdown > 0 ? `${resetCodeCountdown}s 后重发` : '获取验证码' }}
             </el-button>
           </div>
         </el-form-item>
         <el-form-item label="新密码">
-          <el-input v-model="resetForm.newPassword" type="password" show-password autocomplete="new-password" />
+          <el-input
+            v-model="resetForm.newPassword"
+            type="password"
+            show-password
+            autocomplete="new-password"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="resetVisible = false">取消</el-button>
-        <el-button type="primary" :loading="resetLoading" @click="handleResetPassword">重置密码</el-button>
+        <el-button type="primary" :loading="resetLoading" @click="handleResetPassword"
+          >重置密码</el-button
+        >
       </template>
     </el-dialog>
   </div>

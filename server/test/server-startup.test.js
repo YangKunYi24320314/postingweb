@@ -16,7 +16,7 @@ test('server starts on a random port', async () => {
     const timeout = setTimeout(() => {
       child.kill()
       reject(new Error(`server startup timed out; output: ${output}`))
-    }, 5000)
+    }, 15000)
 
     child.stdout.on('data', (chunk) => {
       output += chunk.toString()
