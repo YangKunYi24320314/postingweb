@@ -40,7 +40,7 @@ erDiagram
 | password_hash | VARCHAR(255) | 非空 | 加密后的密码 |
 | nickname | VARCHAR(50) | 可空 | 显示昵称 |
 | avatar_url | VARCHAR(500) | 可空 | 头像链接 |
-| background_url | VARCHAR(500) | 可空 | 个人信息背景图链接 |
+| background_url | TEXT | 可空 | 个人主页背景图（新增，个人中心模块） |
 | email | VARCHAR(100) | 唯一,可空 | 邮箱 |
 | bio | VARCHAR(255) | 可空 | 个人简介 |
 | role | VARCHAR(20) | 默认 'user' | user / admin |

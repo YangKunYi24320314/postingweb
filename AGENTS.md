@@ -116,12 +116,13 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
   - 认证：`POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/me`、`PUT /api/auth/profile`
   - 用户：`GET /api/users/:id`（公开信息，无需登录）
   - 分类/标签：`GET /api/categories`、`GET /api/tags`
-  - 帖子：`GET/POST /api/posts`、`GET/PUT/DELETE /api/posts/{id}`
+  - 帖子：`GET/POST /api/posts`（列表支持 `rank` 组合排序：latest/hot/recommend）、`GET/PUT/DELETE /api/posts/{id}`
   - 评论：`GET/POST /api/posts/{id}/comments`、`PUT/DELETE /api/comments/{id}`
   - 互动：`POST/DELETE /api/posts/{id}/like`、`POST/DELETE /api/posts/{id}/favorite`、`POST/DELETE /api/comments/{id}/like`
-  - 记录：`POST /api/posts/{id}/view`、`GET/DELETE /api/me/history`、`GET /api/me/posts`、`GET /api/me/favorites`、`GET /api/me/likes`
+  - 记录：`POST /api/posts/{id}/view`、`GET/DELETE /api/me/history`、`GET /api/me/posts`、`GET /api/me/favorites`、`GET /api/me/likes`（`/me/*` 均支持 `keyword` 模糊搜索）
+  - 个人中心：`POST /api/me/avatar`（传 `file`）、`GET /api/me/stats`（获赞/收藏总数）、`POST|GET /api/me/background`（背景图）
   - 附件：`POST /api/attachments/upload`（需登录）、`GET /api/attachments/{id}/download`（公开）
-  - 其他：`POST /api/upload`（旧版通用图片上传，保留但**不在契约内**）、`GET /api/recommend/posts`（二期可选）
+  - 其他：`POST /api/upload`（旧版通用图片上传，保留但**不在契约内**）；推荐已并入 `GET /api/posts?rank=recommend`，无独立 `/api/recommend/posts` 接口
 - **数据库核心表**：`users`、`categories`、`posts`、`tags`、`post_tags`、`post_attachments`、`comments`、`post_likes`、`comment_likes`、`favorites`、`histories`（+ 可选的 `user_tag_preferences`）。
 - **关键业务规则**：帖子**软删除**（`is_deleted`）；帖子表 `*_count` 计数在写入时同事务更新（别每次 COUNT）；点赞/收藏/浏览记录用唯一约束防重复。
 - **关于上传**：附件已进契约：数据库有 `post_attachments` 表，接口为 `/api/attachments/upload`（`multipart/form-data`，字段固定为 `file`）和 `/api/attachments/{id}/download`；文件存后端 `server/static/attachments/`。上传返回 `{ id, original_filename, file_size }`，`post_id` 初始为空（暂存），要绑定帖子需自行写更新逻辑。注意：旧版 `POST /api/upload` 不在契约内，别混用。
@@ -136,8 +137,8 @@ npm run dev / npm start   # 即 node server.js (http://localhost:3000)
 ## 8. 团队/进度背景
 
 - 4 名新手 + 1 名 PM，6 天短学期项目，全员用不同 AI 协作开发 → **统一和协调是最大挑战**，所以本文件 + `devdocs/` 契约 + 统一的代码规范必须遵守。
-- 当前实现进度：**auth / posts / comments / interactions(点赞收藏) / me(记录中心) 后端已全部完成并按契约实现**；前端页面基本齐全。
-- **尚未完成**：① 帖子详情页 + 评论区 UI（后端接口已就绪）；② 推荐模块 `/api/recommend/posts`（二期可选）。
+- 当前实现进度：**auth / posts / comments / interactions(点赞收藏) / me(记录中心，含头像/背景图/统计) 后端已全部完成并按契约实现**；帖子详情页 + 评论区 UI 也已做好；前端页面基本齐全。
+- **尚未完成**：① 独立推荐接口 `/api/recommend/posts` 未实现（推荐已并入 `GET /api/posts?rank=recommend`）；② 其它二期可选优化。
 - 建议新增/修改时，先读 `devdocs/development-plan.md` 了解分工边界。
 
 ## 9. 当你被要求改代码时
