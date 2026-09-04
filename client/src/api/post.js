@@ -5,7 +5,8 @@ export function getPostList(params) {
   return request({
     url: '/posts',
     method: 'get',
-    params
+    params,
+    skipAuthRedirect: true,
   })
 }
 

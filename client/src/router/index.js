@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import BaseLayout from '../layouts/BaseLayout.vue'
+import { getToken } from '../api/request'
+
 const routes = [
   {
     path: '/login',
@@ -11,13 +13,7 @@ const routes = [
     path: '/',
     component: BaseLayout,
     children: [
-      {
-        path: '',
-        name: 'Home',
-        component: () => import('../views/HomeView.vue'),
-        meta: { title: '首页' },
-      },
-      // ✅ 子路由去掉开头的 /，path 改为 post‑page
+      { path: '', name: 'Home', component: () => import('../views/HomeView.vue'), meta: { title: '首页' } },
       {
         path: 'post-page',
         name: 'PostPage',
@@ -34,32 +30,39 @@ const routes = [
         path: 'write',
         name: 'WritePost',
         component: () => import('../views/WritePostView.vue'),
-        meta: { title: '写帖子' },
+        meta: { title: '写帖子', requiresAuth: true },
       },
       {
         path: 'records',
         name: 'Records',
         component: () => import('../views/RecordsView.vue'),
-        meta: { title: '记录中心' },
+        meta: { title: '记录中心', requiresAuth: true },
       },
       {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/ProfileView.vue'),
-        meta: { title: '个人中心' },
+        meta: { title: '个人中心', requiresAuth: true },
+      },
+      {
+        path: 'users/:id',
+        name: 'UserProfile',
+        component: () => import('../views/UserProfileView.vue'),
+        meta: { title: '用户主页' },
       },
     ],
   },
 ]
-const router = createRouter({
-  history: createWebHistory(),
-  routes,
+
+const router = createRouter({ history: createWebHistory(), routes })
+
+router.beforeEach((to) => {
+  if (to.name === 'Login' && getToken()) return { path: '/' }
+  if (to.meta.requiresAuth && !getToken()) return { path: '/login', query: { redirect: to.fullPath } }
 })
 
-router.beforeEach((to, from, next) => {
-  next()
-})
 router.afterEach((to) => {
   document.title = to.meta.title ? `${to.meta.title} · 校园社区` : '校园社区'
 })
+
 export default router

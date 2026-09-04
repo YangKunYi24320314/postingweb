@@ -72,8 +72,8 @@
           <el-button
           type="primary"
           class="submit-btn"
-          @click="submitPost"
           :loading="loading"
+          @click="submitPost"
           >
           提交发布
           </el-button>

@@ -26,14 +26,14 @@ export function clearToken() {
 }
 
 // 统一处理后端返回的 { code, message, data }
-function handleResponse(res) {
+function handleResponse(res, config = {}) {
   if (res.code === 0) {
     return res.data // 成功：直接把 data 返回，调用方拿到的就是数据本身
   }
   // 登录已失效：清除 token，跳回登录页
   if (res.code === 1002) {
     clearToken()
-    if (window.location.pathname !== '/login') {
+    if (!config.skipAuthRedirect && window.location.pathname !== '/login') {
       window.location.href = '/login'
     }
   }
@@ -51,12 +51,12 @@ request.interceptors.request.use((config) => {
 
 // 响应拦截器：解包 + 统一错误提示
 request.interceptors.response.use(
-  (response) => handleResponse(response.data),
+  (response) => handleResponse(response.data, response.config),
   (error) => {
     // 后端出错时也会返回 { code, message, data }，从这里尽量读出真实信息
     const res = error.response && error.response.data
     if (res && typeof res.code === 'number') {
-      return handleResponse(res)
+      return handleResponse(res, error.config)
     }
     return Promise.reject(new Error('网络异常，请稍后重试'))
   }

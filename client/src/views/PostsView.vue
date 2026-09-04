@@ -3,8 +3,6 @@ import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, View, ChatDotRound, Pointer } from '@element-plus/icons-vue'
-// 导入路由读取方法，用于获取URL中的页码参数
-import { useRoute } from 'vue-router'
 import { getPostList } from '../api/post'
 import { getCategories } from '../api/catalog'
 import InteractionButtons from '../components/InteractionButtons.vue'
