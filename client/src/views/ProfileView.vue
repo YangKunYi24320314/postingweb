@@ -188,6 +188,7 @@ function openEdit() {
 function handleCommand(command) {
   if (command === 'editProfile') openEdit()
   if (command === 'changeBackground') triggerBgUpload()
+  if (command === 'securityCenter') router.push('/security')
 }
 
 // 保存个人信息
@@ -408,6 +409,7 @@ onMounted(() => {
             <el-dropdown-menu>
               <el-dropdown-item command="editProfile">修改个人信息</el-dropdown-item>
               <el-dropdown-item command="changeBackground">更改个人信息背景</el-dropdown-item>
+              <el-dropdown-item command="securityCenter">个人安全中心</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
