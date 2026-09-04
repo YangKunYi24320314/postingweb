@@ -50,6 +50,12 @@ const routes = [
         meta: { title: '个人中心', requiresAuth: true },
       },
       {
+        path: 'security',
+        name: 'SecurityCenter',
+        component: () => import('../views/SecurityCenterView.vue'),
+        meta: { title: '安全中心', requiresAuth: true },
+      },
+      {
         path: 'user/:id',
         name: 'OtherProfile',
         component: () => import('../views/OtherProfileView.vue'),
