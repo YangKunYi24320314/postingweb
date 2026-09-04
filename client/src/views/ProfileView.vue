@@ -455,7 +455,11 @@ onMounted(() => {
       </div>
 
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-        <el-tab-pane label="我发布的" name="posts" />
+        <el-tab-pane name="posts">
+          <template #label>
+            <span class="tab-label--primary">我发布的</span>
+          </template>
+        </el-tab-pane>
         <el-tab-pane label="我收藏的" name="favorites" />
         <el-tab-pane label="我点赞的" name="likes" />
       </el-tabs>
@@ -943,6 +947,12 @@ onMounted(() => {
 .profile__pagination {
   margin-top: var(--space-md);
   justify-content: flex-end;
+}
+
+/* 页签美化：首项「我发布的」放大加粗 */
+.tab-label--primary {
+  font-size: 15px;
+  font-weight: 700;
 }
 
 /* 账号安全：绑定联系方式 + 修改密码 */
