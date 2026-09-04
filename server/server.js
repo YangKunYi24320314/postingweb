@@ -9,6 +9,10 @@ const app = express();
 app.use(express.json({ charset: 'utf-8' }));
 app.use(cors());
 
+// ========== 【修改1：新增 前端页面托管】访问根路径直接打开网站 ==========
+// 打包后的前端dist目录，局域网设备直接输IP就能打开
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
 // 静态资源托管：访问 /static/xxx
 app.use('/static', express.static(path.join(__dirname, './static')));
 
@@ -61,7 +65,6 @@ app.get('/api/hello', (req, res) => {
 });
 
 // ========== 路由挂载区 ==========
-
 // 1. 帖子路由
 let postRoutes;
 try{
