@@ -1,10 +1,13 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, View, ChatDotRound, Pointer } from '@element-plus/icons-vue'
 import { getPostList } from '../api/post'
 import { getCategories } from '../api/catalog'
 import InteractionButtons from '../components/InteractionButtons.vue'
+
+const route = useRoute()
 
 // 列表数据
 const list = ref([])
@@ -19,7 +22,7 @@ const filters = ref({
   categoryId: '',
   tag: '',
   keyword: '',
-  rank: ['latest'],
+  rank: 'latest',
 })
 
 // 格式化时间：ISO → "2026-09-01 08:54"
@@ -47,7 +50,7 @@ async function loadList() {
       categoryId: filters.value.categoryId || undefined,
       tag: filters.value.tag || undefined,
       keyword: filters.value.keyword || undefined,
-      rank: filters.value.rank.join(',') || 'latest',
+      rank: filters.value.rank || 'latest',
     })
     list.value = data.list
     total.value = data.total
@@ -60,8 +63,8 @@ async function loadList() {
 
 // 切换分类/搜索/排序都回到第一页并重新加载
 function handleFilterChange() {
-  if (filters.value.rank.length === 0) {
-    filters.value.rank = ['latest']
+  if (!filters.value.rank) {
+    filters.value.rank = 'latest'
   }
   page.value = 1
   loadList()
@@ -78,10 +81,24 @@ function searchByTag(tag) {
   handleFilterChange()
 }
 
+function handleKeywordInput(value) {
+  const keyword = String(value || '').trim()
+  if (!keyword || keyword !== filters.value.tag) {
+    filters.value.tag = ''
+  }
+}
+
 function clearSearch() {
   filters.value.keyword = ''
   filters.value.tag = ''
   handleFilterChange()
+}
+
+function applyRouteQuery() {
+  const queryTag = typeof route.query.tag === 'string' ? route.query.tag.trim() : ''
+  const queryKeyword = typeof route.query.keyword === 'string' ? route.query.keyword.trim() : ''
+  filters.value.tag = queryTag
+  filters.value.keyword = queryKeyword || queryTag
 }
 
 // 翻页
@@ -91,6 +108,7 @@ function handlePageChange(p) {
 }
 
 onMounted(async () => {
+  applyRouteQuery()
   loadList()
   try {
     categories.value = await getCategories()
@@ -98,6 +116,15 @@ onMounted(async () => {
     ElMessage.error(e.message || '分类加载失败')
   }
 })
+
+watch(
+  () => route.query,
+  () => {
+    applyRouteQuery()
+    page.value = 1
+    loadList()
+  }
+)
 </script>
 
 <template>
@@ -128,18 +155,19 @@ onMounted(async () => {
         clearable
         class="filter-bar__search"
         :prefix-icon="Search"
+        @input="handleKeywordInput"
         @keyup.enter="handleFilterChange"
         @clear="clearSearch"
       />
-      <el-checkbox-group
+      <el-radio-group
         v-model="filters.rank"
         class="filter-bar__rank"
         @change="handleFilterChange"
       >
-        <el-checkbox-button value="latest">最新</el-checkbox-button>
-        <el-checkbox-button value="hot">热门</el-checkbox-button>
-        <el-checkbox-button value="recommend">猜你喜欢</el-checkbox-button>
-      </el-checkbox-group>
+        <el-radio-button value="latest">最新</el-radio-button>
+        <el-radio-button value="hot">热门</el-radio-button>
+        <el-radio-button value="recommend">猜你喜欢</el-radio-button>
+      </el-radio-group>
     </div>
 
     <!-- 帖子列表 -->
