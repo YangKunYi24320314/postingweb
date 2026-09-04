@@ -18,6 +18,7 @@ erDiagram
     CATEGORIES ||--o{ POSTS : "分类"
     TAGS ||--o{ POST_TAGS : ""
     POSTS ||--o{ POST_TAGS : ""
+    POSTS ||--o{ POST_ATTACH : "附件"
     POSTS ||--o{ COMMENTS : "拥有"
     POSTS ||--o{ POST_LIKES : ""
     POSTS ||--o{ FAVORITES : ""
@@ -58,7 +59,7 @@ erDiagram
 | created_at | TIMESTAMPTZ | 默认 now() | |
 | updated_at | TIMESTAMPTZ | 默认 now() | |
 
-> 分类种子数据（5 个）：随便聊聊 / 校园生活 / 学习交流 / 二手交易 / 社团活动。
+> 分类种子数据（8 个）：课程学业 / 校园生活 / 社团活动 / 二手闲置 / 求助问答 / 组队搭子 / 校园资讯 / 经验分享。
 
 ### posts — 帖子表
 | 字段 | 类型 | 约束 | 说明 |
@@ -86,7 +87,7 @@ erDiagram
 | created_at | TIMESTAMPTZ | 默认 now() | |
 | updated_at | TIMESTAMPTZ | 默认 now() | |
 
-> 标签种子数据（10 个）：考研 / 自习室 / 课程 / 食堂 / 社团 / 二手 / 求助 / 组队 / 活动 / 经验分享。
+> 标签种子数据（20 个）：考研 / 自习室 / 课程资料 / 选课 / 期末复习 / 食堂测评 / 宿舍生活 / 二手教材 / 电子产品 / 社团招新 / 活动报名 / 组队学习 / 运动健身 / 实习就业 / 校园通知 / 生活求助 / 经验分享 / 失物招领 / 租房 / 通勤。
 
 ### post_tags — 帖子与标签（多对多）
 | 字段 | 类型 | 约束 | 说明 |
@@ -94,6 +95,19 @@ erDiagram
 | post_id | BIGINT | FK→posts,ON DELETE CASCADE | |
 | tag_id | BIGINT | FK→tags,ON DELETE CASCADE | |
 | （联合主键 post_id + tag_id） | | | |
+
+### post_attachments — 帖子附件表（新增）
+> 用于存储帖子（或暂存）上传的文件/图片/视频，`post_id` 可空表示上传后尚未绑定到具体帖子。
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | BIGINT | PK,自增 | |
+| post_id | BIGINT | FK→posts,可空,ON DELETE CASCADE | 所属帖子（可空=暂存未绑定） |
+| original_filename | VARCHAR(255) | 非空 | 原始文件名 |
+| file_path | VARCHAR(500) | 非空 | 服务器存储相对路径 |
+| file_size | BIGINT | 非空 | 文件大小（字节） |
+| mime_type | VARCHAR(100) | 非空 | MIME 类型（如 image/png） |
+| created_at | TIMESTAMPTZ | 默认 now() | |
+| （约束 file_size >= 0） | | | |
 
 ## 四、互动系统
 

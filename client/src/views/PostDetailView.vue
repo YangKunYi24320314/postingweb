@@ -2,10 +2,10 @@
 // 帖子详情页：展示帖子全文 + 评论区（发表/回复/编辑/删除/点赞）。
 // 后端接口见 devdocs/api-protocol.md（帖子详情 / 评论 / 点赞 / 上报浏览）。
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Pointer } from '@element-plus/icons-vue'
-import { getPostById } from '../api/post'
+import { getPostById, deletePost } from '../api/post'
 import { getComments, createComment } from '../api/comments'
 import { reportView } from '../api/record'
 import { getMe } from '../api/auth'
@@ -14,12 +14,14 @@ import InteractionButtons from '../components/InteractionButtons.vue'
 import CommentItem from '../components/CommentItem.vue'
 
 const route = useRoute()
+const router = useRouter()
 // 从路由参数取出帖子 id（如 /post/3 -> 3）
 const postId = computed(() => Number(route.params.id))
 
 const post = ref(null)
 const comments = ref([])
 const myUserId = ref(null)
+const me = ref(null)
 const loading = ref(false)
 const commentsLoading = ref(false)
 
@@ -83,17 +85,61 @@ async function loadComments() {
   }
 }
 
-// 取当前用户 id（用于判断"是不是我的评论"）；未登录则为 null
+// 取当前登录用户（用于判断"是不是我的评论/能不能删帖"）；未登录则为 null
 async function loadMe() {
   if (!getToken()) {
     myUserId.value = null
+    me.value = null
     return
   }
   try {
-    const me = await getMe()
-    myUserId.value = me.id
+    const meData = await getMe()
+    me.value = meData
+    myUserId.value = meData.id
   } catch {
     myUserId.value = null
+    me.value = null
+  }
+}
+
+// 能不能删帖：仅作者本人或管理员
+const isCanDelete = computed(() => {
+  if (!post.value || !me.value) return false
+  const currentUserId = Number(me.value.id)
+  const authorId = Number(post.value.user?.id)
+  const isAuthor = currentUserId && authorId && currentUserId === authorId
+  const isAdmin = me.value.role === 'admin'
+  return isAuthor || isAdmin
+})
+
+// 文件大小格式化
+function formatFileSize(bytes) {
+  if (!bytes) return '-'
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+// 点击下载附件
+function handleDownload(file) {
+  window.open(`/api/attachments/${file.id}/download`, '_blank')
+}
+
+// 删除帖子（软删除，仅作者或管理员，删除后回到帖子广场）
+async function handleDelete() {
+  try {
+    await ElMessageBox.confirm('确定要删除该帖子吗？删除后无法恢复。', '删除确认', {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await deletePost(post.value.id)
+    ElMessage.success('帖子删除成功')
+    router.push('/post-page')
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error(err.message || '删除失败，请重试')
+    }
   }
 }
 
@@ -145,6 +191,16 @@ onMounted(async () => {
         <div class="detail-card__head">
           <h2 class="detail-card__title">{{ post.title }}</h2>
           <span v-if="post.isPinned" class="detail-card__pin">置顶</span>
+          <el-button
+            v-if="isCanDelete"
+            class="detail-card__delete"
+            type="danger"
+            size="small"
+            plain
+            @click="handleDelete"
+          >
+            删除帖子
+          </el-button>
         </div>
 
         <div class="detail-card__meta">
@@ -157,6 +213,20 @@ onMounted(async () => {
         </div>
 
         <div class="detail-card__content">{{ post.content }}</div>
+
+        <!-- 附件下载区域 -->
+        <div v-if="post.attachments && post.attachments.length" class="detail-card__attach">
+          <h4>📎 附件下载</h4>
+          <el-button
+            v-for="file in post.attachments"
+            :key="file.id"
+            class="detail-card__attach-item"
+            @click="handleDownload(file)"
+          >
+            <span class="file-name">{{ file.original_filename }}</span>
+            <span class="file-size">{{ formatFileSize(file.file_size) }}</span>
+          </el-button>
+        </div>
 
         <div class="detail-card__stats">
           <span
@@ -237,6 +307,10 @@ onMounted(async () => {
   padding: 0 var(--space-xs);
 }
 
+.detail-card__delete {
+  margin-left: auto;
+}
+
 .detail-card__meta {
   display: flex;
   gap: var(--space-md);
@@ -258,6 +332,31 @@ onMounted(async () => {
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.8;
+}
+
+.detail-card__attach {
+  margin-top: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.detail-card__attach h4 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.detail-card__attach-item {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.detail-card__attach-item .file-size {
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .detail-card__stats {

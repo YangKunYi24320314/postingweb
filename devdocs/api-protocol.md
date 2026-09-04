@@ -115,7 +115,15 @@
 | categoryId | 按分类筛选 |
 | tag | 按标签筛选（单个标签名） |
 | keyword | 关键词搜标题+正文 |
-| sort | new(最新,默认) / hot(最热) |
+| rank | 组合排序，逗号分隔，可选 latest / hot / recommend，默认 latest |
+| sort | 兼容旧参数：new / hot；新功能建议用 rank |
+
+**排序规则**
+- `latest`：按发布时间新鲜度计分，越新的帖子分越高。
+- `hot`：按互动热度计分，公式为 `浏览数*1 + 点赞数*3 + 收藏数*4 + 评论数*5`。
+- `recommend`：按当前用户兴趣计分，浏览过的帖子标签 +1，点赞过的帖子标签 +3，收藏过的帖子标签 +4。
+- 多个排序因子可以一起使用，例如 `rank=latest,hot,recommend`，后端会把各项得分相加后排序。
+- `rank` 包含 `recommend` 时必须登录；如果用户暂无浏览/点赞/收藏记录，先按热门分兜底推荐。
 
 **响应 data**：分页结构，`list` 每项：
 ```json
@@ -184,17 +192,39 @@
 
 ---
 
-## 八、推荐（模块5，可选，二期）
+## 八、附件 Attachments（帖子附件）
 
-### 8.1 `GET /recommend/posts` — 个性化推荐（需登录）
-**请求参数**：`page` / `pageSize`
-**响应 data**：分页结构，按用户偏好的标签排序推荐。
-> 简化实现：根据用户点赞/收藏/浏览过的帖子标签统计偏好，返回偏好标签下的相似帖子。
+> 附件用于帖子里的文件/图片/视频。上传后返回附件 id，前端再把 `post_id` 绑定到帖子。
+> 上传的原始文件存放在后端 `server/static/attachments/`，通过 `/static/...` 或下载接口访问。
+
+### 8.1 `POST /attachments/upload` — 上传附件（需登录）
+**请求**：`multipart/form-data`，字段名固定为 `file`（单文件，最大 100MB）。
+**响应 data**：新建附件对象
+```json
+{ "id": 1, "original_filename": "课件.pdf", "file_size": 2048000 }
+```
+
+### 8.2 `GET /attachments/:id/download` — 下载附件（公开，无需登录）
+**响应**：以原始文件名返回文件二进制流（`Content-Disposition` 为附件下载）。
 
 ---
 
-## 九、给后端/前端的提示
+## 九、推荐（模块5，可选，二期）
 
-1. **后端实现顺序建议**：`auth` → `posts` → `comments` → `like/favorite` → `history` → `recommend`。
+### 9.1 帖子广场个性化排序
+推荐能力合并在 `GET /posts` 中，通过 `rank=recommend` 或 `rank=hot,recommend` 使用。
+
+示例：
+- `GET /posts?rank=recommend`：按当前用户兴趣推荐。
+- `GET /posts?rank=latest,recommend`：综合发布时间和用户兴趣。
+- `GET /posts?categoryId=1&tag=考研&rank=hot,recommend`：先筛选分类和标签，再综合热度与兴趣排序。
+
+> 简化实现：根据用户浏览、点赞、收藏过的帖子标签统计偏好，再给带有相同标签的候选帖子加权。
+
+---
+
+## 十、给后端/前端的提示
+
+1. **后端实现顺序建议**：`auth` → `posts` → `comments` → `like/favorite` → `history` → `attachments` → `recommend`。
 2. **前端调接口**：永远通过封装好的 `src/api/xxx.js`，不要在页面里直接写请求（见前端架构约定）。
 3. **返回结构固定**：后端再简单也要返回 `{ code, message, data }` 三层，方便前端统一处理 `message`。
