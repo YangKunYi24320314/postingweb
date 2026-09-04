@@ -71,6 +71,42 @@ function buildMyWhere(userCond, userId, keyword) {
   return { where: conditions.join(' AND '), params }
 }
 
+// GET /api/users/:id/posts —— 查看某用户发布的帖子（公开，分页）
+router.get('/users/:id/posts', async (req, res) => {
+  const userId = Number(req.params.id)
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return fail(res, CODE.PARAM_ERROR, '用户 id 不合法')
+  }
+  const { page, pageSize, offset } = parsePage(req.query)
+
+  const count = await pool.query(
+    'SELECT COUNT(*)::int AS total FROM posts WHERE user_id = $1 AND is_deleted = false',
+    [userId]
+  )
+  const total = count.rows[0].total
+
+  const list = await pool.query(
+    `SELECT p.id::int, p.title, p.content, p.category_id::int,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.created_at,
+            u.id::int AS user_id, u.nickname,
+            c.name AS category_name
+     FROM posts p
+     JOIN users u ON u.id = p.user_id
+     LEFT JOIN categories c ON c.id = p.category_id
+     WHERE p.user_id = $1 AND p.is_deleted = false
+     ORDER BY p.created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [userId, pageSize, offset]
+  )
+
+  const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))
+  const mapped = list.rows.map((row) => {
+    row.tags = tagsMap[row.id] || []
+    return toPostItem(row)
+  })
+  return ok(res, { list: mapped, total, page, pageSize })
+})
+
 // GET /api/me/posts —— 我发布的帖子（需登录，分页，支持 keyword）
 router.get('/me/posts', auth, async (req, res) => {
   const { page, pageSize, offset } = parsePage(req.query)

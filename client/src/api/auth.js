@@ -43,7 +43,3 @@ export function uploadAvatar(file) {
   formData.append('file', file)
   return request.post('/me/avatar', formData)
 }
-
-export function getPublicUser(id) {
-  return request.get(`/users/${id}`)
-}

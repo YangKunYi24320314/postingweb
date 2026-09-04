@@ -140,7 +140,39 @@ paths:
                   - $ref: '#/components/schemas/ApiResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/User' }
+                      data:
+                        type: object
+                        properties:
+                          id: { type: integer }
+                          username: { type: string }
+                          nickname: { type: string, nullable: true }
+                          avatarUrl: { type: string, nullable: true }
+                          backgroundUrl: { type: string, nullable: true }
+                          bio: { type: string, nullable: true }
+                          postCount: { type: integer }
+                          totalLikes: { type: integer }
+                          totalFavorites: { type: integer }
+
+  /users/{id}/posts:
+    get:
+      tags: [认证]
+      summary: 查看某用户发布的帖子
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/MyPostPageResult' }
 
   /auth/contact/send-code:
     post:
