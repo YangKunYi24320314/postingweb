@@ -47,7 +47,7 @@ onMounted(loadPosts)
   <div class="home-page">
     <section class="home-hero page-container">
       <div class="home-hero__copy">
-        <span class="home-hero__eyebrow">CAMPUS COMMUNITY</span>
+        <span class="home-hero__eyebrow">CAMPUS HUB</span>
         <h1>欢迎来到校园社区</h1>
         <p>分享校园生活，找到同频的交流与灵感。</p>
         <div class="home-hero__actions">
