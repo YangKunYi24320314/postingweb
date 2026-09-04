@@ -103,8 +103,10 @@ router.get('/users/:id', async (req, res) => {
   }
 
   const result = await pool.query(
-    `SELECT u.id::int, u.nickname, u.avatar_url, u.bio,
-            (SELECT COUNT(*)::int FROM posts p WHERE p.user_id = u.id AND p.is_deleted = false) AS post_count
+    `SELECT u.id::int, u.username, u.nickname, u.avatar_url, u.background_url, u.bio,
+            (SELECT COUNT(*)::int FROM posts p WHERE p.user_id = u.id AND p.is_deleted = false) AS post_count,
+            (SELECT COALESCE(SUM(p.like_count), 0)::int FROM posts p WHERE p.user_id = u.id AND p.is_deleted = false) AS total_likes,
+            (SELECT COALESCE(SUM(p.favorite_count), 0)::int FROM posts p WHERE p.user_id = u.id AND p.is_deleted = false) AS total_favorites
      FROM users u
      WHERE u.id = $1 AND u.status = 1`,
     [userId]
@@ -116,10 +118,14 @@ router.get('/users/:id', async (req, res) => {
   const row = result.rows[0]
   return ok(res, {
     id: row.id,
+    username: row.username,
     nickname: row.nickname,
     avatarUrl: row.avatar_url,
+    backgroundUrl: row.background_url || null,
     bio: row.bio,
     postCount: row.post_count,
+    totalLikes: row.total_likes,
+    totalFavorites: row.total_favorites,
   })
 })
 

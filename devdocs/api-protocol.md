@@ -77,7 +77,19 @@
 **响应 data**：更新后的用户信息。
 
 ### 2.5 `GET /users/:id` — 查看某用户公开信息（无需登录）
-**响应 data**：该用户的 id / nickname / avatar_url / bio / post 数量。
+**响应 data**：该用户的公开信息。
+
+```json
+{
+  "id": 1, "username": "24320326", "nickname": "昵称",
+  "avatarUrl": "http://host/static/avatars/xxx.png",
+  "backgroundUrl": "http://host/static/backgrounds/xxx.jpg",
+  "bio": "简介", "postCount": 3, "totalLikes": 12, "totalFavorites": 5
+}
+```
+
+### 2.6 `GET /users/:id/posts` — 查看某用户发布的帖子（无需登录，分页）
+**响应 data**：`{ list, total, page, pageSize }`，`list` 项结构与「我的内容」列表一致（见 7.2）。
 
 ---
 

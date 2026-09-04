@@ -48,6 +48,12 @@ const routes = [
         component: () => import('../views/ProfileView.vue'),
         meta: { title: '个人中心' },
       },
+      {
+        path: 'user/:id',
+        name: 'OtherProfile',
+        component: () => import('../views/OtherProfileView.vue'),
+        meta: { title: '个人主页' },
+      },
     ],
   },
 ]
