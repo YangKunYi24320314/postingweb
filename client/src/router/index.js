@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import BaseLayout from '../layouts/BaseLayout.vue'
 import { getToken } from '../api/request'
+import { getMe } from '../api/auth' // 引入获取当前用户信息接口
 
 const routes = [
   {
@@ -61,16 +62,42 @@ const routes = [
         component: () => import('../views/OtherProfileView.vue'),
         meta: { title: '个人主页' },
       },
+      // ========== 管理员子路由（嵌套在主布局内，共用侧边栏） ==========
+      {
+        path: 'admin/deleted-posts',
+        name: 'AdminDeletedPosts',
+        component: () => import('../views/admin/AdminDeletedPosts.vue'),
+        meta: { title: '帖子回收站', requiresAuth: true, requiresAdmin: true },
+      },
     ],
   },
 ]
 
 const router = createRouter({ history: createWebHistory(), routes })
 
-router.beforeEach((to) => {
+// ========== 扩展全局守卫：新增管理员权限校验 ==========
+router.beforeEach(async (to) => {
+  // 已登录用户访问登录页，直接跳首页
   if (to.name === 'Login' && getToken()) return { path: '/' }
-  if (to.meta.requiresAuth && !getToken())
+
+  // 需要登录但无 token，跳登录页并携带重定向地址
+  if (to.meta.requiresAuth && !getToken()) {
     return { path: '/login', query: { redirect: to.fullPath } }
+  }
+
+  // 需要管理员权限：校验用户角色
+  if (to.meta.requiresAdmin) {
+    try {
+      const userInfo = await getMe()
+      // 非管理员用户强制跳回首页
+      if (userInfo.role !== 'admin') {
+        return { path: '/' }
+      }
+    } catch (err) {
+      // 获取用户信息失败（token 失效等），跳登录页
+      return { path: '/login', query: { redirect: to.fullPath } }
+    }
+  }
 })
 
 router.afterEach((to) => {

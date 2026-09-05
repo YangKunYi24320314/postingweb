@@ -9,7 +9,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const pool = require('../db')
 const { ok, fail, CODE } = require('../utils/response')
-const { auth } = require('../middleware/auth')
+const { auth, optionalAuth, authAdmin } = require('../middleware/auth')
 const { validateCredentials } = require('../utils/auth-validation')
 const { createSmsProvider } = require('../services/sms-provider')
 const { createEmailProvider } = require('../services/email-provider')
@@ -36,6 +36,7 @@ function getContactAuthService() {
 
   let smsProvider
   let emailProvider
+
   try {
     smsProvider = createSmsProvider()
   } catch (error) {
@@ -51,11 +52,13 @@ function getContactAuthService() {
     pool,
     providers: { phone: smsProvider, email: emailProvider },
   })
+
   contactAuthService = createContactAuthService({
     pool,
     verificationService,
     signToken,
   })
+
   return contactAuthService
 }
 
@@ -93,6 +96,7 @@ function signToken(userId) {
 router.post('/auth/register', async (req, res) => {
   const { username, password, nickname } = req.body || {}
   let credentials
+
   try {
     credentials = validateCredentials(username, password)
   } catch (error) {
@@ -112,6 +116,7 @@ router.post('/auth/register', async (req, res) => {
 
   // 密码必须加密后才入库，绝不能存明文
   const passwordHash = await bcrypt.hash(password, 10)
+
   // 昵称可传可不传：没传就用用户名兜底（与契约字段 nickname 对齐）
   const finalNickname = (typeof nickname === 'string' ? nickname.trim() : '') || credentials.username
 
@@ -121,8 +126,8 @@ router.post('/auth/register', async (req, res) => {
      RETURNING id, username, nickname, avatar_url, bio, role`,
     [credentials.username, passwordHash, finalNickname]
   )
-
   const user = result.rows[0]
+
   return ok(res, { token: signToken(user.id), user: toUser(user) })
 })
 
@@ -142,19 +147,30 @@ router.post('/auth/login', async (req, res) => {
 
 // GET /api/auth/me —— 获取当前登录用户（需登录）
 router.get('/auth/me', auth, async (req, res) => {
-  const result = await pool.query(
-    'SELECT id, username, nickname, avatar_url, bio, role, phone, email FROM users WHERE id = $1 AND status = 1',
-    [req.userId]
-  )
-  if (result.rowCount === 0) {
-    return fail(res, CODE.NOT_FOUND, '用户不存在', 404)
+  try {
+    console.log('✅ auth中间件传递的userId:', req.userId)
+    const result = await pool.query(
+      'SELECT id, username, nickname, avatar_url, bio, role FROM users WHERE id = $1 AND status = 1',
+      [req.userId]
+    )
+    console.log('✅ 查询到的用户:', result.rows[0])
+    
+    if (result.rowCount === 0) {
+      return fail(res, CODE.NOT_FOUND, '用户不存在', 404)
+    }
+    
+    // 先直接返回原始用户，跳过toUser，验证是不是toUser的问题
+    return ok(res, result.rows[0])
+  } catch (e) {
+    console.error('❌ /auth/me 接口错误:', e.message)
+    return fail(res, CODE.SERVER_ERROR, '服务器内部错误', 500)
   }
-  return ok(res, toUser(result.rows[0]))
 })
 
 // PUT /api/auth/profile —— 更新个人信息（需登录）
 router.put('/auth/profile', auth, async (req, res) => {
   const { nickname, bio, avatarUrl } = req.body || {}
+
   // 昵称可传可不传：没传就保留原值，避免把空字符串写进库
   const finalNickname = typeof nickname === 'string' && nickname.trim() ? nickname.trim() : null
 
@@ -168,7 +184,6 @@ router.put('/auth/profile', auth, async (req, res) => {
      RETURNING id, username, nickname, avatar_url, bio, role, phone, email`,
     [finalNickname, bio || null, avatarUrl || null, req.userId]
   )
-
   if (result.rowCount === 0) {
     return fail(res, CODE.NOT_FOUND, '用户不存在', 404)
   }
@@ -252,13 +267,17 @@ router.get('/users/:id', async (req, res) => {
   if (!userId) {
     return fail(res, CODE.PARAM_ERROR, '用户 id 必须是正整数')
   }
-
   const user = await findPublicUser(pool, userId)
   if (!user) {
     return fail(res, CODE.NOT_FOUND, '用户不存在', 404)
   }
-
   return ok(res, user)
+})
+
+// ========== 管理员测试接口（验证权限用） ==========
+// 可用来快速验证管理员角色是否生效
+router.get('/auth/admin/test', auth, authAdmin, async (req, res) => {
+  ok(res, { message: '管理员权限验证通过', user: req.user })
 })
 
 module.exports = router
