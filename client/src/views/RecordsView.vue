@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Search, Close } from '@element-plus/icons-vue'
 import { getHistory, clearHistory, deleteHistory } from '../api/record'
 
@@ -67,8 +67,17 @@ function goPost(row) {
   router.push(`/post/${row.id}`)
 }
 
-// 删除单条浏览记录
+// 删除单条浏览记录（先弹确认框，确认后才删除）
 async function handleDeleteOne(row) {
+  try {
+    await ElMessageBox.confirm('确定删除这条浏览记录吗？', '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return // 用户点了取消，不删除
+  }
   try {
     await deleteHistory(row.id)
     ElMessage.success('已删除该条浏览记录')
@@ -88,8 +97,17 @@ function handlePageChange(p) {
   loadHistory()
 }
 
-// 清空浏览记录
+// 清空浏览记录（先弹确认框，确认后才清空）
 async function handleClear() {
+  try {
+    await ElMessageBox.confirm('确定清空所有浏览记录吗？此操作不可恢复。', '清空确认', {
+      confirmButtonText: '清空',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return // 用户点了取消，不清空
+  }
   try {
     await clearHistory()
     ElMessage.success('已清空浏览记录')
@@ -133,11 +151,9 @@ onMounted(() => {
             :prefix-icon="Search"
           />
         </div>
-        <el-popconfirm title="确定清空所有浏览记录吗？" @confirm="handleClear">
-          <template #reference>
-            <el-button type="danger" plain :disabled="total === 0">清空浏览记录</el-button>
-          </template>
-        </el-popconfirm>
+        <el-button type="danger" plain :disabled="total === 0" @click="handleClear">
+          清空浏览记录
+        </el-button>
       </div>
 
       <el-table
