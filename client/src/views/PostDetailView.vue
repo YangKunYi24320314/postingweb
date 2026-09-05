@@ -10,6 +10,7 @@ import { getComments, createComment } from '../api/comments'
 import { reportView } from '../api/record'
 import { getMe } from '../api/auth'
 import { getToken } from '../api/request'
+import { restorePost } from '../api/admin' // 新增：导入还原帖子接口
 import InteractionButtons from '../components/InteractionButtons.vue'
 import CommentItem from '../components/CommentItem.vue'
 
@@ -106,14 +107,25 @@ async function loadMe() {
   }
 }
 
-// 能不能删帖：仅作者本人或管理员
+// ========== 核心修改：删帖权限升级为「作者本人 或 管理员」 ==========
 const isCanDelete = computed(() => {
   if (!post.value || !me.value) return false
+  // 已删除的帖子不再显示删除按钮
+  if (post.value.isDeleted) return false
   const currentUserId = Number(me.value.id)
   const authorId = Number(post.value.user?.id)
   const isAuthor = currentUserId && authorId && currentUserId === authorId
+  // 新增管理员角色判断
   const isAdmin = me.value.role === 'admin'
   return isAuthor || isAdmin
+})
+
+// ========== 新增：管理员还原按钮显示控制 ==========
+const showRestoreBtn = computed(() => {
+  if (!post.value || !me.value) return false
+  // 仅管理员 + 帖子已删除状态 才显示
+  const isAdmin = me.value.role === 'admin'
+  return isAdmin && post.value.isDeleted
 })
 
 // 文件大小格式化
@@ -141,7 +153,6 @@ function handlePreview(file) {
   currentPreviewUrl.value = fileUrl
   // 【补上这行】拼接完整的绝对地址
   const fullFileUrl = window.location.origin + fileUrl
-
   const type = file.mime_type
   if (type.startsWith('image/')) {
     imageVisible.value = true
@@ -187,7 +198,7 @@ const goBack = () => {
 // 删除帖子（软删除，仅作者或管理员，删除后回到帖子广场）
 async function handleDelete() {
   try {
-    await ElMessageBox.confirm('确定要删除该帖子吗？删除后无法恢复。', '删除确认', {
+    await ElMessageBox.confirm('确定要删除该帖子吗？删除后可在回收站恢复。', '删除确认', {
       confirmButtonText: '确认删除',
       cancelButtonText: '取消',
       type: 'warning',
@@ -198,6 +209,25 @@ async function handleDelete() {
   } catch (err) {
     if (err !== 'cancel') {
       ElMessage.error(err.message || '删除失败，请重试')
+    }
+  }
+}
+
+// ========== 新增：还原帖子（仅管理员，还原后跳回回收站） ==========
+async function handleRestore() {
+  try {
+    await ElMessageBox.confirm('确定要还原这篇帖子吗？还原后将重新在帖子广场展示', '还原确认', {
+      confirmButtonText: '确认还原',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await restorePost(post.value.id)
+    ElMessage.success('帖子还原成功')
+    // 还原成功后自动返回回收站列表
+    router.push('/admin/deleted-posts')
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error(err.message || '还原失败，请重试')
     }
   }
 }
@@ -251,10 +281,24 @@ onMounted(async () => {
         <div class="back-bar">
           <el-button type="primary" text @click="goBack"> ← 返回帖子列表 </el-button>
         </div>
-
         <div class="detail-card__head">
           <h2 class="detail-card__title">{{ post.title }}</h2>
           <span v-if="post.isPinned" class="detail-card__pin">置顶</span>
+          <!-- 新增：已删除标记 -->
+          <span v-if="post.isDeleted" class="detail-card__deleted">已删除</span>
+          
+          <!-- 还原按钮：仅管理员查看已删除帖时显示 -->
+          <el-button
+            v-if="showRestoreBtn"
+            class="detail-card__restore"
+            type="primary"
+            size="small"
+            @click="handleRestore"
+          >
+            还原帖子
+          </el-button>
+
+          <!-- 删除按钮：未删除状态 + 有权限时显示 -->
           <el-button
             v-if="isCanDelete"
             class="detail-card__delete"
@@ -266,12 +310,10 @@ onMounted(async () => {
             删除帖子
           </el-button>
         </div>
-
         <div class="detail-card__meta">
           <span class="detail-card__author">{{ post.user?.nickname || '匿名用户' }}</span>
           <span class="detail-card__time">{{ formatTime(post.createdAt) }}</span>
         </div>
-
         <div v-if="post.tags && post.tags.length" class="detail-card__tags">
           <el-tag
             v-for="tag in post.tags"
@@ -284,9 +326,7 @@ onMounted(async () => {
             {{ tag }}
           </el-tag>
         </div>
-
         <div class="detail-card__content">{{ post.content }}</div>
-
         <!-- ===== 附件区域：点击文件名预览，点击按钮下载 ===== -->
         <div v-if="post.attachments && post.attachments.length" class="detail-card__attach">
           <h4>📎 附件</h4>
@@ -307,7 +347,6 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-
         <!-- 图片预览弹窗 -->
         <el-dialog v-model="imageVisible" width="80%" top="5vh" :show-close="true">
           <img
@@ -316,7 +355,6 @@ onMounted(async () => {
             alt="图片预览"
           />
         </el-dialog>
-
         <!-- PDF 预览弹窗 -->
         <el-dialog v-model="pdfVisible" width="90%" top="5vh">
           <iframe
@@ -325,12 +363,10 @@ onMounted(async () => {
             frameborder="0"
           />
         </el-dialog>
-
         <!-- 视频预览弹窗 -->
         <el-dialog v-model="videoVisible" width="80%" top="5vh">
           <video :src="currentPreviewUrl" controls style="width: 100%" />
         </el-dialog>
-
         <div class="detail-card__stats">
           <span
             ><el-icon><View /></el-icon> 浏览 {{ post.viewCount }}</span
@@ -345,7 +381,6 @@ onMounted(async () => {
         </div>
       </template>
     </el-card>
-
     <!-- 评论区 -->
     <el-card shadow="never" class="comment-card">
       <h3 class="comment-card__title">评论 ({{ post?.commentCount || 0 }})</h3>
@@ -407,7 +442,19 @@ onMounted(async () => {
   border-radius: var(--radius-sm);
   padding: 0 var(--space-xs);
 }
+/* 新增：已删除标记样式 */
+.detail-card__deleted {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-xs);
+}
 .detail-card__delete {
+  margin-left: auto;
+}
+.detail-card__restore {
   margin-left: auto;
 }
 .detail-card__meta {
