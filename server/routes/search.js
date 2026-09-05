@@ -26,13 +26,17 @@ function toPost(row) {
     title: row.title,
     categoryId: row.category_id,
     categoryName: row.category_name || null,
+    content: row.content,
     user: { id: row.user_id, nickname: row.nickname, avatarUrl: row.user_avatar_url || null },
     viewCount: row.view_count,
     likeCount: row.like_count,
     favoriteCount: row.favorite_count,
     commentCount: row.comment_count,
+    isLiked: row.is_liked,
+    isFavorite: row.is_favorite,
     createdAt: row.created_at,
     tags: row.tags || [],
+    attachments: row.attachments || [],
   }
 }
 
@@ -73,6 +77,32 @@ async function getTagsByPostIds(postIds) {
   result.rows.forEach((row) => {
     if (!map[row.post_id]) map[row.post_id] = []
     map[row.post_id].push(row.name)
+  })
+  return map
+}
+
+// 批量查一组帖子 id 的图片/视频附件（每帖最多 3 个，供卡片预览）
+async function getMediaByPostIds(postIds) {
+  if (!postIds.length) return {}
+  const result = await pool.query(
+    `SELECT pa.post_id::int AS post_id, pa.id, pa.file_path, pa.mime_type, pa.original_filename
+     FROM post_attachments pa
+     WHERE pa.post_id = ANY($1::int[])
+       AND (pa.mime_type LIKE 'image/%' OR pa.mime_type LIKE 'video/%')
+     ORDER BY pa.post_id, pa.id`,
+    [postIds]
+  )
+  const map = {}
+  result.rows.forEach((row) => {
+    if (!map[row.post_id]) map[row.post_id] = []
+    if (map[row.post_id].length < 3) {
+      map[row.post_id].push({
+        id: row.id,
+        file_path: row.file_path,
+        mime_type: row.mime_type,
+        original_filename: row.original_filename,
+      })
+    }
   })
   return map
 }
@@ -123,24 +153,30 @@ router.get('/search/posts', optionalAuth, async (req, res) => {
   ])
   const total = count.rows[0].total
 
+  const currentUserId = Number(req.userId) || 0
+
   const listResult = await pool.query(
-    `SELECT p.id::int, p.user_id::int, p.title, p.category_id::int,
+    `SELECT p.id::int, p.user_id::int, p.title, p.content, p.category_id::int,
             p.view_count, p.like_count, p.favorite_count, p.comment_count, p.created_at,
             u.nickname,
             u.avatar_url AS user_avatar_url,
-            c.name AS category_name
+            c.name AS category_name,
+            EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS is_liked,
+            EXISTS(SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $2) AS is_favorite
        FROM posts p
        JOIN users u ON u.id = p.user_id
        LEFT JOIN categories c ON c.id = p.category_id
       WHERE ${where}
       ORDER BY ${orderBy}, p.id DESC
-      LIMIT $2 OFFSET $3`,
-    [keywordParam, pageSize, offset]
+      LIMIT $3 OFFSET $4`,
+    [keywordParam, currentUserId, pageSize, offset]
   )
 
   const tagsMap = await getTagsByPostIds(listResult.rows.map((row) => row.id))
+  const mediaMap = await getMediaByPostIds(listResult.rows.map((row) => row.id))
   const list = listResult.rows.map((row) => {
     row.tags = tagsMap[row.id] || []
+    row.attachments = mediaMap[row.id] || []
     return toPost(row)
   })
 
