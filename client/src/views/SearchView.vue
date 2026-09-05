@@ -66,10 +66,6 @@ function applyRouteQuery() {
 
 function pushSearch(next = {}) {
   const q = String(next.keyword ?? keyword.value).trim()
-  if (!q) {
-    ElMessage.warning('请输入搜索内容')
-    return
-  }
 
   router.push({
     path: '/search',
@@ -122,12 +118,6 @@ async function openSearchPanel() {
 
 async function loadResults() {
   const q = String(keyword.value || '').trim()
-  if (!q) {
-    posts.value = []
-    users.value = []
-    total.value = 0
-    return
-  }
 
   loading.value = true
   try {
