@@ -62,18 +62,12 @@ const routes = [
         component: () => import('../views/OtherProfileView.vue'),
         meta: { title: '个人主页' },
       },
-      // ========== 新增：管理员子路由（嵌套在主布局内，共用侧边栏） ==========
+      // ========== 管理员子路由（嵌套在主布局内，共用侧边栏） ==========
       {
         path: 'admin/deleted-posts',
         name: 'AdminDeletedPosts',
         component: () => import('../views/admin/AdminDeletedPosts.vue'),
         meta: { title: '帖子回收站', requiresAuth: true, requiresAdmin: true },
-      },
-      {
-        path: 'admin/post/:id',
-        name: 'AdminPostDetail',
-        component: () => import('../views/admin/AdminPostDetail.vue'),
-        meta: { title: '已删除帖子详情', requiresAuth: true, requiresAdmin: true },
       },
     ],
   },
