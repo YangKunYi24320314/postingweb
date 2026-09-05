@@ -56,18 +56,26 @@ router.post('/posts/:id/view', auth, async (req, res) => {
   try {
     await client.query('BEGIN')
 
-    // 1) 记浏览：同一人同一帖只留一条，重复浏览就刷新 viewed_at
-    //    （靠表的唯一约束 + ON CONFLICT 实现"有则更新、无则插入"）
-    await client.query(
-      `INSERT INTO histories (user_id, post_id)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id, post_id)
-       DO UPDATE SET viewed_at = now(), updated_at = now()`,
+    // 1) 先锁定当前用户与当前帖子的浏览记录，避免并发刷新造成重复加浏览数。
+    const history = await client.query(
+      'SELECT id FROM histories WHERE user_id = $1 AND post_id = $2 FOR UPDATE',
       [req.userId, postId]
     )
 
-    // 2) 同步把帖子的浏览数 +1
-    await client.query('UPDATE posts SET view_count = view_count + 1 WHERE id = $1', [postId])
+    if (history.rowCount === 0) {
+      // 第一次浏览：写入记录，并把帖子总浏览数 +1。
+      await client.query('INSERT INTO histories (user_id, post_id) VALUES ($1, $2)', [
+        req.userId,
+        postId,
+      ])
+      await client.query('UPDATE posts SET view_count = view_count + 1 WHERE id = $1', [postId])
+    } else {
+      // 重复浏览/刷新：只更新最近浏览时间，不重复增加总浏览数。
+      await client.query(
+        'UPDATE histories SET viewed_at = now(), updated_at = now() WHERE user_id = $1 AND post_id = $2',
+        [req.userId, postId]
+      )
+    }
 
     await client.query('COMMIT')
   } catch (err) {

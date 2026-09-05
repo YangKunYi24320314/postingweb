@@ -1,8 +1,10 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { View, ChatDotRound, Pointer, ArrowLeft } from '@element-plus/icons-vue'
+import { View, ChatDotRound, ArrowLeft, Search } from '@element-plus/icons-vue'
+import { ThumbsUp } from 'lucide-vue-next'
 import { getUserInfo, getUserPosts } from '../api/user'
+import PostMediaPreview from '../components/PostMediaPreview.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,6 +21,8 @@ const pageSize = ref(10)
 const loading = ref(false)
 let requestSeq = 0
 const listVersion = ref(0)
+const keyword = ref('') // 搜索关键词（标题/正文）
+let searchTimer = null // 防抖定时器
 
 // 头像全图预览
 const avatarPreviewVisible = ref(false)
@@ -63,7 +67,11 @@ async function loadPosts() {
   const seq = ++requestSeq
   loading.value = true
   try {
-    const data = await getUserPosts(id, { page: page.value, pageSize: pageSize.value })
+    const data = await getUserPosts(id, {
+      page: page.value,
+      pageSize: pageSize.value,
+      keyword: keyword.value || undefined,
+    })
     if (seq !== requestSeq) return
     list.value = data.list
     total.value = data.total
@@ -78,6 +86,15 @@ async function loadPosts() {
     }
   }
 }
+
+// 监听关键词变化：防抖 300ms 后回到第一页并重新加载
+watch(keyword, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    loadPosts()
+  }, 300)
+})
 
 function handlePageChange(p) {
   page.value = p
@@ -183,9 +200,19 @@ watch(
     <el-card v-loading="loading" shadow="never">
       <div class="profile__header">
         <h2 class="profile__title">Ta的投稿</h2>
+        <el-input
+          v-model="keyword"
+          class="profile__search"
+          placeholder="搜索标题或正文"
+          clearable
+          :prefix-icon="Search"
+        />
       </div>
 
-      <el-empty v-if="!loading && list.length === 0" description="暂无内容" />
+      <el-empty
+        v-if="!loading && list.length === 0"
+        :description="keyword ? '没有匹配的内容' : '暂无内容'"
+      />
       <div
         v-for="(row, index) in list"
         :key="`${listVersion}-${row.id}`"
@@ -215,10 +242,12 @@ watch(
         <div v-if="contentPreview(row.content)" class="profile-post-card__preview">
           {{ contentPreview(row.content) }}
         </div>
+        <!-- 附件图片/视频预览（一直展示，位于正文预览下方） -->
+        <PostMediaPreview :attachments="row.attachments || []" :post-id="row.id" />
         <div class="profile-post-card__stats">
           <span><el-icon><View /></el-icon> {{ row.viewCount }}</span>
           <span><el-icon><ChatDotRound /></el-icon> {{ row.commentCount }}</span>
-          <span><el-icon><Pointer /></el-icon> {{ row.likeCount }}</span>
+          <span><el-icon><ThumbsUp /></el-icon> {{ row.likeCount }}</span>
         </div>
       </div>
 
@@ -271,7 +300,7 @@ watch(
   pointer-events: none;
 }
 .profile__info--bg-loaded::before {
-  opacity: 0.6;
+  opacity: 0.85;
 }
 .profile__info::after {
   content: '';
@@ -280,27 +309,36 @@ watch(
   left: 0;
   right: 0;
   height: 66.66%;
-  background: linear-gradient(135deg, var(--brand-primary) 0%, transparent 50%, var(--brand-primary) 100%);
-  background-size: 200% 200%;
-  opacity: 0.5;
+  /* 上层：白色扫光；下层：很淡的品牌蓝遮罩（恢复层次，不随扫光移动） */
+  background:
+    linear-gradient(
+      115deg,
+      transparent 40%,
+      color-mix(in srgb, var(--bg-white) 30%, transparent) 50%,
+      transparent 60%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--brand-primary) 20%, transparent) 0%,
+      transparent 50%,
+      color-mix(in srgb, var(--brand-primary) 20%, transparent) 100%
+    );
+  background-size: 300% 100%, 200% 200%;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
-  animation: profile-gradient-flow 7s ease-in-out infinite;
+  animation: profile-shine 5s ease-in-out infinite;
   pointer-events: none;
 }
 .profile__info :deep(.el-card__body) {
   position: relative;
   z-index: 1;
 }
-@keyframes profile-gradient-flow {
+@keyframes profile-shine {
   0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
+    background-position: 100% 0, 0% 50%;
   }
   100% {
-    background-position: 0% 50%;
+    background-position: 0% 0, 0% 50%;
   }
 }
 
@@ -396,6 +434,9 @@ watch(
 .profile__title {
   font-size: 18px;
   color: var(--text-primary);
+}
+.profile__search {
+  width: 240px;
 }
 
 .profile-post-card {

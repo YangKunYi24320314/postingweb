@@ -2,12 +2,14 @@
 import { ref, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { MoreFilled, Edit, View, ChatDotRound, Pointer, Search } from '@element-plus/icons-vue'
+import { MoreFilled, Edit, View, ChatDotRound, Search } from '@element-plus/icons-vue'
+import { ThumbsUp } from 'lucide-vue-next'
 import { getMe, updateProfile, bindContact, changePassword, sendContactCode } from '../api/auth'
 import { saveToken } from '../api/request'
 import { getMyPosts, getMyFavorites, getMyLikes, uploadAvatar, getMeStats, uploadBackground, getMeBackground } from '../api/record'
 import RecentHistoryPreview from '../components/RecentHistoryPreview.vue'
 import AvatarCropper from '../components/AvatarCropper.vue'
+import PostMediaPreview from '../components/PostMediaPreview.vue'
 
 const router = useRouter()
 
@@ -188,6 +190,7 @@ function openEdit() {
 function handleCommand(command) {
   if (command === 'editProfile') openEdit()
   if (command === 'changeBackground') triggerBgUpload()
+  if (command === 'securityCenter') router.push('/security')
 }
 
 // 保存个人信息
@@ -408,6 +411,7 @@ onMounted(() => {
             <el-dropdown-menu>
               <el-dropdown-item command="editProfile">修改个人信息</el-dropdown-item>
               <el-dropdown-item command="changeBackground">更改个人信息背景</el-dropdown-item>
+              <el-dropdown-item command="securityCenter">个人安全中心</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -453,7 +457,11 @@ onMounted(() => {
       </div>
 
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-        <el-tab-pane label="我发布的" name="posts" />
+        <el-tab-pane name="posts">
+          <template #label>
+            <span class="tab-label--primary">我发布的</span>
+          </template>
+        </el-tab-pane>
         <el-tab-pane label="我收藏的" name="favorites" />
         <el-tab-pane label="我点赞的" name="likes" />
       </el-tabs>
@@ -492,10 +500,12 @@ onMounted(() => {
         <div v-if="contentPreview(row.content)" class="profile-post-card__preview">
           {{ contentPreview(row.content) }}
         </div>
+        <!-- 附件图片/视频预览（一直展示，位于正文预览下方） -->
+        <PostMediaPreview :attachments="row.attachments || []" :post-id="row.id" />
         <div class="profile-post-card__stats">
           <span><el-icon><View /></el-icon> {{ row.viewCount }}</span>
           <span><el-icon><ChatDotRound /></el-icon> {{ row.commentCount }}</span>
-          <span><el-icon><Pointer /></el-icon> {{ row.likeCount }}</span>
+          <span><el-icon><ThumbsUp /></el-icon> {{ row.likeCount }}</span>
         </div>
       </div>
 
@@ -702,7 +712,7 @@ onMounted(() => {
   pointer-events: none;
 }
 .profile__info--bg-loaded::before {
-  opacity: 0.6;
+  opacity: 0.85;
 }
 .profile__info::after {
   content: '';
@@ -711,32 +721,36 @@ onMounted(() => {
   left: 0;
   right: 0;
   height: 66.66%;
-  background: linear-gradient(
-    135deg,
-    var(--brand-primary) 0%,
-    transparent 50%,
-    var(--brand-primary) 100%
-  );
-  background-size: 200% 200%;
-  opacity: 0.5;
+  /* 上层：白色扫光；下层：很淡的品牌蓝遮罩（恢复层次，不随扫光移动） */
+  background:
+    linear-gradient(
+      115deg,
+      transparent 40%,
+      color-mix(in srgb, var(--bg-white) 30%, transparent) 50%,
+      transparent 60%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--brand-primary) 20%, transparent) 0%,
+      transparent 50%,
+      color-mix(in srgb, var(--brand-primary) 20%, transparent) 100%
+    );
+  background-size: 300% 100%, 200% 200%;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
-  animation: profile-gradient-flow 7s ease-in-out infinite;
+  animation: profile-shine 5s ease-in-out infinite;
   pointer-events: none;
 }
 .profile__info :deep(.el-card__body) {
   position: relative;
   z-index: 1;
 }
-@keyframes profile-gradient-flow {
+@keyframes profile-shine {
   0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
+    background-position: 100% 0, 0% 50%;
   }
   100% {
-    background-position: 0% 50%;
+    background-position: 0% 0, 0% 50%;
   }
 }
 .info__actions {
@@ -941,6 +955,12 @@ onMounted(() => {
 .profile__pagination {
   margin-top: var(--space-md);
   justify-content: flex-end;
+}
+
+/* 页签美化：首项「我发布的」放大加粗 */
+.tab-label--primary {
+  font-size: 15px;
+  font-weight: 700;
 }
 
 /* 账号安全：绑定联系方式 + 修改密码 */

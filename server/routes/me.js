@@ -27,6 +27,7 @@ function toPostItem(row) {
     createdAt: row.created_at,
     favoritedAt: row.favorited_at, // 只有"收藏列表"的查询里有这个字段
     likedAt: row.liked_at, // 只有"点赞列表"的查询里有这个字段
+    attachments: row.attachments || [], // 图片/视频附件（前端预览用，最多 3 个）
   }
   // 注：其余查询没有 favorited_at/liked_at 列，值是 undefined，JSON.stringify 会自动省略它。
 }
@@ -57,6 +58,33 @@ async function getTagsByPostIds(postIds) {
   return map
 }
 
+// 批量查一组帖子 id 的图片/视频附件，返回 { postId: [附件...] }。
+// 每个帖子最多取 3 个：前端最多展示 2 个，用「是否 >=3」判断是否还有更多（展示“+”）。
+async function getMediaByPostIds(postIds) {
+  if (!postIds.length) return {}
+  const result = await pool.query(
+    `SELECT pa.post_id::int AS post_id, pa.id, pa.file_path, pa.mime_type, pa.original_filename
+     FROM post_attachments pa
+     WHERE pa.post_id = ANY($1::int[])
+       AND (pa.mime_type LIKE 'image/%' OR pa.mime_type LIKE 'video/%')
+     ORDER BY pa.post_id, pa.id`,
+    [postIds]
+  )
+  const map = {}
+  result.rows.forEach((row) => {
+    if (!map[row.post_id]) map[row.post_id] = []
+    if (map[row.post_id].length < 3) {
+      map[row.post_id].push({
+        id: row.id,
+        file_path: row.file_path,
+        mime_type: row.mime_type,
+        original_filename: row.original_filename,
+      })
+    }
+  })
+  return map
+}
+
 // 组装「我的内容」列表的过滤条件：用户条件 + 软删除 + 可选关键词模糊匹配。
 // userCond 形如 "p.user_id" / "f.user_id" / "pl.user_id"。返回 { where, params }。
 function buildMyWhere(userCond, userId, keyword) {
@@ -71,17 +99,27 @@ function buildMyWhere(userCond, userId, keyword) {
   return { where: conditions.join(' AND '), params }
 }
 
-// GET /api/users/:id/posts —— 查看某用户发布的帖子（公开，分页）
+// GET /api/users/:id/posts —— 查看某用户发布的帖子（公开，分页，支持 keyword）
 router.get('/users/:id/posts', async (req, res) => {
   const userId = Number(req.params.id)
   if (!Number.isInteger(userId) || userId <= 0) {
     return fail(res, CODE.PARAM_ERROR, '用户 id 不合法')
   }
   const { page, pageSize, offset } = parsePage(req.query)
+  const keyword = String(req.query.keyword || '').trim()
+
+  // 关键词模糊匹配：标题/正文（作者固定为该用户，无需按作者搜）
+  const conditions = ['p.user_id = $1', 'p.is_deleted = false']
+  const params = [userId]
+  if (keyword) {
+    params.push(`%${keyword}%`)
+    conditions.push(`(p.title ILIKE $${params.length} OR p.content ILIKE $${params.length})`)
+  }
+  const where = conditions.join(' AND ')
 
   const count = await pool.query(
-    'SELECT COUNT(*)::int AS total FROM posts WHERE user_id = $1 AND is_deleted = false',
-    [userId]
+    `SELECT COUNT(*)::int AS total FROM posts p WHERE ${where}`,
+    params
   )
   const total = count.rows[0].total
 
@@ -93,15 +131,17 @@ router.get('/users/:id/posts', async (req, res) => {
      FROM posts p
      JOIN users u ON u.id = p.user_id
      LEFT JOIN categories c ON c.id = p.category_id
-     WHERE p.user_id = $1 AND p.is_deleted = false
+     WHERE ${where}
      ORDER BY p.created_at DESC
-     LIMIT $2 OFFSET $3`,
-    [userId, pageSize, offset]
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, pageSize, offset]
   )
 
   const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))
+  const mediaMap = await getMediaByPostIds(list.rows.map((r) => r.id))
   const mapped = list.rows.map((row) => {
     row.tags = tagsMap[row.id] || []
+    row.attachments = mediaMap[row.id] || []
     return toPostItem(row)
   })
   return ok(res, { list: mapped, total, page, pageSize })
@@ -137,8 +177,10 @@ router.get('/me/posts', auth, async (req, res) => {
   )
 
   const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))
+  const mediaMap = await getMediaByPostIds(list.rows.map((r) => r.id))
   const mapped = list.rows.map((row) => {
     row.tags = tagsMap[row.id] || []
+    row.attachments = mediaMap[row.id] || []
     return toPostItem(row)
   })
   return ok(res, { list: mapped, total, page, pageSize })
@@ -177,8 +219,10 @@ router.get('/me/favorites', auth, async (req, res) => {
   )
 
   const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))
+  const mediaMap = await getMediaByPostIds(list.rows.map((r) => r.id))
   const mapped = list.rows.map((row) => {
     row.tags = tagsMap[row.id] || []
+    row.attachments = mediaMap[row.id] || []
     return toPostItem(row)
   })
   return ok(res, { list: mapped, total, page, pageSize })
@@ -217,8 +261,10 @@ router.get('/me/likes', auth, async (req, res) => {
   )
 
   const tagsMap = await getTagsByPostIds(list.rows.map((r) => r.id))
+  const mediaMap = await getMediaByPostIds(list.rows.map((r) => r.id))
   const mapped = list.rows.map((row) => {
     row.tags = tagsMap[row.id] || []
+    row.attachments = mediaMap[row.id] || []
     return toPostItem(row)
   })
   return ok(res, { list: mapped, total, page, pageSize })

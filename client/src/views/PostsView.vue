@@ -2,7 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, View, ChatDotRound, Pointer } from '@element-plus/icons-vue'
+import { Search, View, ChatDotRound } from '@element-plus/icons-vue'
 import { getPostList } from '../api/post'
 import { getCategories } from '../api/catalog'
 import InteractionButtons from '../components/InteractionButtons.vue'
@@ -210,9 +210,6 @@ watch(
             >
             <span
               ><el-icon><ChatDotRound /></el-icon> {{ item.commentCount }}</span
-            >
-            <span
-              ><el-icon><Pointer /></el-icon> {{ item.likeCount }}</span
             >
           </div>
           <InteractionButtons
