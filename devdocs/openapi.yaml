@@ -149,6 +149,7 @@ paths:
                           avatarUrl: { type: string, nullable: true }
                           backgroundUrl: { type: string, nullable: true }
                           bio: { type: string, nullable: true }
+                          role: { type: string }
                           postCount: { type: integer }
                           totalLikes: { type: integer }
                           totalFavorites: { type: integer }
@@ -944,6 +945,271 @@ paths:
               schema:
                 type: string
                 format: binary
+
+  /friends:
+    get:
+      tags: [好友]
+      summary: 好友列表
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer }
+                            username: { type: string }
+                            nickname: { type: string, nullable: true }
+                            avatarUrl: { type: string, nullable: true }
+                            bio: { type: string, nullable: true }
+                            friendsAt: { type: string, nullable: true }
+                            lastMessage: { type: string, nullable: true }
+                            lastMessageAt: { type: string, nullable: true }
+
+  /friends/requests:
+    get:
+      tags: [好友]
+      summary: 收到的好友申请
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer }
+                            status: { type: string }
+                            createdAt: { type: string }
+                            requester: { $ref: '#/components/schemas/User' }
+
+  /friends/{id}/request:
+    post:
+      tags: [好友]
+      summary: 发起好友申请
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /friends/requests/{id}/accept:
+    post:
+      tags: [好友]
+      summary: 同意好友申请
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /friends/status/{userId}:
+    get:
+      tags: [好友]
+      summary: 好友关系状态
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          status: { type: string, enum: [none, self, friends, pending_sent, pending_received] }
+
+  /messages/conversations/{friendId}:
+    get:
+      tags: [私信]
+      summary: 聊天记录
+      parameters:
+        - { name: friendId, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: [私信]
+      summary: 发送消息
+      parameters:
+        - { name: friendId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /search/posts:
+    get:
+      tags: [搜索]
+      summary: 搜索帖子
+      security: []
+      parameters:
+        - { name: keyword, in: query, schema: { type: string } }
+        - { name: rank, in: query, schema: { type: string, enum: [all, latest, hot] } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+
+  /search/users:
+    get:
+      tags: [搜索]
+      summary: 搜索用户
+      security: []
+      parameters:
+        - { name: keyword, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+
+  /search/hot:
+    get:
+      tags: [搜索]
+      summary: 热门搜索
+      security: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { type: object } }
+
+  /search/suggestions:
+    get:
+      tags: [搜索]
+      summary: 搜索建议
+      security: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { type: object } }
+
+  /admin/ping:
+    get:
+      tags: [管理员]
+      summary: 连通性测试
+      security: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /admin/posts/deleted:
+    get:
+      tags: [管理员]
+      summary: 已删除帖子列表
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+
+  /admin/posts/{id}:
+    get:
+      tags: [管理员]
+      summary: 已删除帖子详情
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /admin/posts/{id}/restore:
+    put:
+      tags: [管理员]
+      summary: 还原帖子
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
 
 # ============================================================
 # 可复用的数据类型

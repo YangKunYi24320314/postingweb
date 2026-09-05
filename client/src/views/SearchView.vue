@@ -2,10 +2,11 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ChatDotRound, Plus, Search, Star, View } from '@element-plus/icons-vue'
-import { ThumbsUp } from 'lucide-vue-next'
+import { ArrowLeft, ChatDotRound, Plus, Search, View } from '@element-plus/icons-vue'
 import { requestFriend } from '../api/friends'
 import { getHotSearches, getSearchSuggestions, searchPosts, searchUsers } from '../api/search'
+import InteractionButtons from '../components/InteractionButtons.vue'
+import PostMediaPreview from '../components/PostMediaPreview.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -41,6 +42,16 @@ function formatTime(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+// 正文预览：删除空行后返回剩余文本；视觉 3 行省略交给 CSS
+function contentPreview(content) {
+  if (!content) return ''
+  return content
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .join('\n')
+}
+
 function applyRouteQuery() {
   keyword.value =
     typeof route.query.q === 'string'
@@ -55,10 +66,6 @@ function applyRouteQuery() {
 
 function pushSearch(next = {}) {
   const q = String(next.keyword ?? keyword.value).trim()
-  if (!q) {
-    ElMessage.warning('请输入搜索内容')
-    return
-  }
 
   router.push({
     path: '/search',
@@ -111,12 +118,6 @@ async function openSearchPanel() {
 
 async function loadResults() {
   const q = String(keyword.value || '').trim()
-  if (!q) {
-    posts.value = []
-    users.value = []
-    total.value = 0
-    return
-  }
 
   loading.value = true
   try {
@@ -220,6 +221,11 @@ function goUser(user) {
   router.push(`/user/${user.id}`)
 }
 
+// 返回帖子广场
+function goPostPage() {
+  router.push('/post-page')
+}
+
 onMounted(() => {
   document.addEventListener('mousedown', handleDocumentMouseDown)
   applyRouteQuery()
@@ -241,6 +247,10 @@ watch(
 
 <template>
   <div class="page-container search-page">
+    <!-- 左上角返回帖子广场 -->
+    <div class="search-page__topbar">
+      <el-button :icon="ArrowLeft" plain round @click="goPostPage">返回帖子广场</el-button>
+    </div>
     <section class="search-hero">
       <div ref="searchBoxRef" class="search-box">
         <el-input
@@ -335,23 +345,52 @@ watch(
           v-if="!loading && activeType === 'posts' && posts.length === 0"
           description="暂无相关帖子"
         />
-        <article v-for="post in posts" v-else-if="activeType === 'posts'" :key="post.id" class="post-result">
-          <div class="post-result__body" @click="goPost(post)">
-            <div class="post-result__main">
-              <h2>{{ post.title }}</h2>
-              <p>{{ post.categoryName || '未分类' }} · {{ post.user?.nickname || '匿名用户' }} · {{ formatTime(post.createdAt) }}</p>
-              <div v-if="post.tags?.length" class="tag-row" @click.stop>
-                <button v-for="tag in post.tags" :key="tag" type="button" @click="searchTag(tag)">
-                  {{ tag }}
-                </button>
-              </div>
-            </div>
-            <div class="post-result__stats">
+        <article
+          v-for="post in posts"
+          v-else-if="activeType === 'posts'"
+          :key="post.id"
+          class="post-result"
+          @click="goPost(post)"
+        >
+          <div class="post-result__head">
+            <h3 class="post-result__title">{{ post.title }}</h3>
+            <span class="post-result__category">{{ post.categoryName || '未分类' }}</span>
+          </div>
+          <div class="post-result__meta">
+            <span class="post-result__author" @click.stop="goUser(post.user)">
+              {{ post.user?.nickname || '匿名用户' }}
+            </span>
+            <span class="post-result__time">{{ formatTime(post.createdAt) }}</span>
+          </div>
+          <div v-if="post.tags?.length" class="post-result__tags">
+            <el-tag
+              v-for="tag in post.tags"
+              :key="tag"
+              class="post-result__tag"
+              size="small"
+              effect="plain"
+              @click.stop="searchTag(tag)"
+            >
+              {{ tag }}
+            </el-tag>
+          </div>
+          <div v-if="contentPreview(post.content)" class="post-result__preview">
+            {{ contentPreview(post.content) }}
+          </div>
+          <PostMediaPreview :attachments="post.attachments || []" :post-id="post.id" />
+          <div class="post-result__stats">
+            <div class="post-result__counts">
               <span><el-icon><View /></el-icon>{{ post.viewCount || 0 }}</span>
               <span><el-icon><ChatDotRound /></el-icon>{{ post.commentCount || 0 }}</span>
-              <span><ThumbsUp :size="16" />{{ post.likeCount || 0 }}</span>
-              <span><el-icon><Star /></el-icon>{{ post.favoriteCount || 0 }}</span>
             </div>
+            <InteractionButtons
+              :post-id="post.id"
+              :liked="post.isLiked"
+              :like-count="post.likeCount"
+              :favorited="post.isFavorite"
+              :favorite-count="post.favoriteCount"
+              size="small"
+            />
           </div>
         </article>
 
@@ -400,6 +439,10 @@ watch(
 <style scoped>
 .search-page {
   max-width: 1120px;
+}
+
+.search-page__topbar {
+  margin-bottom: var(--space-md);
 }
 
 .search-hero {
@@ -615,65 +658,108 @@ watch(
   margin-top: 16px;
 }
 
-.post-result,
-.user-result {
+.post-result {
+  padding: var(--space-md) 0;
   border-bottom: 1px solid var(--border-color-light);
+  cursor: pointer;
+  animation: card-fade-in 0.3s ease backwards;
+}
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.post-result:last-child {
+  border-bottom: none;
+}
+.post-result:hover .post-result__title {
+  color: var(--brand-primary);
+}
+.post-result__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+.post-result__title {
+  font-size: 17px;
+  color: var(--text-primary);
+  margin: 0;
+  transition: color 0.2s ease;
+}
+.post-result__category {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.post-result__meta {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-xs);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.post-result__author {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.post-result__author:hover {
+  color: var(--brand-primary);
+}
+.post-result__tags {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+  flex-wrap: wrap;
+}
+.post-result__tag {
+  cursor: pointer;
+  user-select: none;
+}
+.post-result__preview {
+  margin-top: var(--space-sm);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  white-space: pre-line;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.post-result__stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  flex-wrap: wrap;
+}
+.post-result__counts {
+  display: flex;
+  gap: var(--space-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.post-result__counts span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
-.post-result__body,
 .user-result {
+  border-bottom: 1px solid var(--border-color-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   padding: 20px 0;
-}
-
-.post-result__body {
-  cursor: pointer;
-}
-
-.post-result__main h2 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 18px;
-}
-
-.post-result__main p {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.tag-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.tag-row button {
-  padding: 4px 10px;
-  border: 1px solid var(--brand-primary-light);
-  border-radius: var(--radius-sm);
-  background: #fff;
-  color: var(--brand-primary);
-  cursor: pointer;
-}
-
-.post-result__stats {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-shrink: 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.post-result__stats span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
 }
 
 .user-result__profile {
@@ -685,6 +771,9 @@ watch(
   background: transparent;
   cursor: pointer;
   text-align: left;
+}
+.user-result__profile :deep(.el-avatar) {
+  flex-shrink: 0;
 }
 
 .user-result__profile span {
@@ -704,6 +793,11 @@ watch(
   font-size: 13px;
   font-style: normal;
 }
+.user-result__profile em {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 
 .search-pagination {
   justify-content: flex-end;
@@ -715,14 +809,9 @@ watch(
     width: 100%;
   }
 
-  .post-result__body,
   .user-result {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .post-result__stats {
-    flex-wrap: wrap;
   }
 }
 </style>

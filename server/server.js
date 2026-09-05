@@ -2,7 +2,6 @@
 const express = require('express')
 const cors = require('cors')
 const fs = require('fs')
-const multer = require('multer')
 const path = require('path')
 require('dotenv').config()
 const { ok, fail, CODE } = require('./utils/response')
@@ -10,32 +9,11 @@ const { UPLOAD_DIR } = require('./utils/avatar-upload')
 
 const app = express()
 const clientDist = path.join(__dirname, '..', 'client', 'dist')
-const legacyUploadDir = path.join(__dirname, 'static')
 
 app.use(express.json({ charset: 'utf-8' }))
 app.use(cors())
 app.use('/uploads', express.static(UPLOAD_DIR))
 app.use('/static', express.static(path.join(__dirname, 'static')))
-
-const legacyUpload = multer({
-  storage: multer.diskStorage({
-    destination: legacyUploadDir,
-    filename: (req, file, callback) => {
-      const extension = path.extname(file.originalname).toLowerCase()
-      callback(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`)
-    },
-  }),
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, callback) => {
-    const allowed = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
-    callback(null, allowed.has(file.mimetype))
-  },
-})
-
-app.post('/upload', legacyUpload.single('file'), (req, res) => {
-  if (!req.file) return fail(res, CODE.PARAM_ERROR, '没有接收到图片')
-  return ok(res, { url: `${req.protocol}://${req.get('host')}/static/${req.file.filename}` })
-})
 
 app.get('/api/hello', (req, res) => {
   ok(res, { message: 'Hello from backend!' })

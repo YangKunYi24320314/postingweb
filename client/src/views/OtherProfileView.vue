@@ -1,9 +1,12 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { View, ChatDotRound, ArrowLeft, Search } from '@element-plus/icons-vue'
 import { ThumbsUp } from 'lucide-vue-next'
 import { getUserInfo, getUserPosts } from '../api/user'
+import { getFriendshipStatus, requestFriend } from '../api/friends'
+import { getToken } from '../api/request'
 import PostMediaPreview from '../components/PostMediaPreview.vue'
 
 const route = useRoute()
@@ -26,6 +29,10 @@ let searchTimer = null // 防抖定时器
 
 // 头像全图预览
 const avatarPreviewVisible = ref(false)
+
+// 好友关系状态：none / self / friends / pending_sent / pending_received
+const friendshipStatus = ref('none')
+const friendLoading = ref(false)
 
 // 从路由 /user/:id 取用户 id
 function currentUserId() {
@@ -139,9 +146,46 @@ function closeAvatarPreview() {
   avatarPreviewVisible.value = false
 }
 
+// 加载好友关系状态（未登录则跳过，保持 none）
+function loadFriendshipStatus() {
+  if (!getToken()) return
+  const id = currentUserId()
+  if (!id) return
+  getFriendshipStatus(id)
+    .then((data) => {
+      friendshipStatus.value = data.status || 'none'
+    })
+    .catch(() => {
+      friendshipStatus.value = 'none'
+    })
+}
+
+// 发送好友申请
+async function handleAddFriend() {
+  const id = currentUserId()
+  if (!id) return
+  friendLoading.value = true
+  try {
+    await requestFriend(id)
+    friendshipStatus.value = 'pending_sent'
+    ElMessage.success('好友申请已发送')
+  } catch (err) {
+    ElMessage.error(err.message || '发送失败')
+  } finally {
+    friendLoading.value = false
+  }
+}
+
+// 去私聊
+function goChat() {
+  const id = currentUserId()
+  if (id != null) router.push(`/messages/chat/${id}`)
+}
+
 onMounted(() => {
   loadUser()
   loadPosts()
+  loadFriendshipStatus()
 })
 
 // 切换查看的用户时重新加载
@@ -151,6 +195,7 @@ watch(
     page.value = 1
     loadUser()
     loadPosts()
+    loadFriendshipStatus()
   }
 )
 </script>
@@ -169,6 +214,31 @@ watch(
       :class="{ 'profile__info--bg-loaded': bgLoaded }"
       :style="user?.backgroundUrl ? { '--profile-bg': `url('${user.backgroundUrl}')` } : {}"
     >
+      <!-- 好友操作按钮（右上角） -->
+      <div v-if="user" class="info__friend-action">
+        <el-button
+          v-if="friendshipStatus === 'none'"
+          type="primary"
+          plain
+          round
+          :loading="friendLoading"
+          @click="handleAddFriend"
+        >
+          申请添加为好友
+        </el-button>
+        <el-button v-else-if="friendshipStatus === 'pending_sent'" type="info" plain round disabled>
+          已发起申请
+        </el-button>
+        <el-button v-else-if="friendshipStatus === 'pending_received'" type="info" plain round disabled>
+          对方已向你发起申请
+        </el-button>
+        <el-button v-else-if="friendshipStatus === 'friends'" type="primary" plain round @click="goChat">
+          去私聊~
+        </el-button>
+        <el-button v-else-if="friendshipStatus === 'self'" type="info" plain round disabled>
+          无法添加自己为好友哦~
+        </el-button>
+      </div>
       <div class="info__avatar">
         <el-avatar
           :size="88"
@@ -180,7 +250,18 @@ watch(
         </el-avatar>
       </div>
       <div class="info__identity">
-        <div class="info__nickname">{{ user?.nickname || '未设置昵称' }}</div>
+        <div class="info__nickname">
+          <span>{{ user?.nickname || '未设置昵称' }}</span>
+          <el-tag
+            v-if="user?.role === 'admin'"
+            type="primary"
+            effect="dark"
+            size="small"
+            class="info__admin-tag"
+          >
+            管理员
+          </el-tag>
+        </div>
         <div class="info__username">{{ user ? '@' + user.username : '' }}</div>
       </div>
       <div class="info__bio">{{ user?.bio || '这个人很懒，什么都没有写' }}</div>
@@ -274,6 +355,12 @@ watch(
 <style scoped>
 .profile__topbar {
   margin-bottom: var(--space-md);
+}
+.info__friend-action {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  z-index: 2;
 }
 .profile__info {
   position: relative;
@@ -388,10 +475,17 @@ watch(
   -webkit-backdrop-filter: blur(6px);
 }
 .info__nickname {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
   font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.2;
+}
+.info__admin-tag {
+  border-radius: var(--radius-full);
+  opacity: 0.8;
 }
 .info__username {
   font-size: 12px;
