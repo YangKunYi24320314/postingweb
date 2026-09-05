@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Document, EditPen } from '@element-plus/icons-vue'
+import { Document, EditPen, InfoFilled } from '@element-plus/icons-vue'
 import { getPostList } from '../api/post'
 
 const router = useRouter()
@@ -41,6 +41,11 @@ function openPost(post) {
   router.push({ name: 'PostDetail', params: { id: post.id } })
 }
 
+// 项目介绍是独立静态页（/about.html），用整页跳转而不是路由跳转
+function goAbout() {
+  window.location.href = '/about.html'
+}
+
 watch(activeRank, loadPosts)
 onMounted(loadPosts)
 </script>
@@ -64,6 +69,7 @@ onMounted(loadPosts)
           <el-button size="large" plain :icon="EditPen" @click="router.push('/write')">
             写一篇帖子
           </el-button>
+          <el-button size="large" plain :icon="InfoFilled" @click="goAbout"> 项目介绍 </el-button>
         </div>
       </div>
       <div class="home-hero__signal" aria-hidden="true">
