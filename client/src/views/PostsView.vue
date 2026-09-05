@@ -1,14 +1,18 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, View, ChatDotRound } from '@element-plus/icons-vue'
 import { getPostList } from '../api/post'
 import { getCategories } from '../api/catalog'
+import { getHotSearches, getSearchSuggestions } from '../api/search'
 import InteractionButtons from '../components/InteractionButtons.vue'
+
+const HISTORY_KEY = 'campushub-search-history'
 
 // 获取当前路由实例
 const route = useRoute()
+const router = useRouter()
 
 // 列表数据
 const list = ref([])
@@ -18,6 +22,12 @@ const pageSize = ref(10)
 const loading = ref(false)
 // 筛选条件
 const categories = ref([]) // 分类下拉数据
+const searchVisible = ref(false)
+const searchLoading = ref(false)
+const searchHistories = ref([])
+const hotSearches = ref([])
+const suggestedSearches = ref([])
+const searchAnchorRef = ref(null)
 const filters = ref({
   categoryId: '',
   tag: '',
@@ -70,6 +80,66 @@ function handleFilterChange() {
   loadList()
 }
 
+function loadSearchHistories() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+    searchHistories.value = Array.isArray(raw) ? raw.slice(0, 8) : []
+  } catch {
+    searchHistories.value = []
+  }
+}
+
+function saveSearchHistory(value) {
+  const text = String(value || '').trim()
+  if (!text) return
+  const next = [text, ...searchHistories.value.filter((item) => item !== text)].slice(0, 8)
+  searchHistories.value = next
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
+}
+
+function clearSearchHistories() {
+  searchHistories.value = []
+  localStorage.removeItem(HISTORY_KEY)
+}
+
+async function openSearchPanel() {
+  searchVisible.value = true
+  loadSearchHistories()
+  searchLoading.value = true
+  try {
+    const [hot, suggested] = await Promise.all([getHotSearches(), getSearchSuggestions()])
+    hotSearches.value = hot
+    suggestedSearches.value = suggested
+  } catch {
+    hotSearches.value = []
+    suggestedSearches.value = []
+  } finally {
+    searchLoading.value = false
+  }
+}
+
+function submitSearch(value = filters.value.keyword) {
+  const keyword = String(value || '').trim()
+  if (!keyword) {
+    ElMessage.warning('请输入搜索内容')
+    return
+  }
+  filters.value.keyword = keyword
+  filters.value.tag = ''
+  searchVisible.value = false
+  saveSearchHistory(keyword)
+  router.push({ path: '/search', query: { q: keyword, type: 'posts', rank: 'all' } })
+}
+
+function handleDocumentMouseDown(event) {
+  if (!searchVisible.value) return
+  const target = event.target
+  const clickedAnchor = searchAnchorRef.value?.contains(target)
+  if (!clickedAnchor) {
+    searchVisible.value = false
+  }
+}
+
 function selectCategory(categoryId) {
   filters.value.categoryId = filters.value.categoryId === categoryId ? '' : categoryId
   handleFilterChange()
@@ -78,6 +148,7 @@ function selectCategory(categoryId) {
 function searchByTag(tag) {
   filters.value.tag = tag
   filters.value.keyword = tag
+  saveSearchHistory(tag)
   handleFilterChange()
 }
 
@@ -91,6 +162,8 @@ function handleKeywordInput(value) {
 function clearSearch() {
   filters.value.keyword = ''
   filters.value.tag = ''
+  searchVisible.value = false
+  router.replace({ path: '/post-page' })
   handleFilterChange()
 }
 
@@ -108,18 +181,25 @@ function handlePageChange(p) {
 }
 
 onMounted(async () => {
+  document.addEventListener('mousedown', handleDocumentMouseDown)
+
   // 从URL读取页码，有合法值就直接定位到对应页
   const queryPage = parseInt(route.query.page)
   if (queryPage && queryPage > 0) {
     page.value = queryPage
   }
 
+  applyRouteQuery()
   loadList()
   try {
     categories.value = await getCategories()
   } catch (e) {
     ElMessage.error(e.message || '分类加载失败')
   }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleDocumentMouseDown)
 })
 
 watch(
@@ -154,16 +234,67 @@ watch(
           {{ c.name }}
         </el-button>
       </div>
-      <el-input
-        v-model="filters.keyword"
-        placeholder="搜索标题、正文或点击标签搜索"
-        clearable
-        class="filter-bar__search"
-        :prefix-icon="Search"
-        @input="handleKeywordInput"
-        @keyup.enter="handleFilterChange"
-        @clear="clearSearch"
-      />
+      <div ref="searchAnchorRef" class="search-shell">
+        <el-input
+          v-model="filters.keyword"
+          placeholder="搜索标题、正文或点击标签搜索"
+          clearable
+          class="filter-bar__search"
+          :prefix-icon="Search"
+          @focus="openSearchPanel"
+          @click="openSearchPanel"
+          @input="handleKeywordInput"
+          @keyup.enter="submitSearch()"
+          @clear="clearSearch"
+        />
+
+        <div v-if="searchVisible" v-loading="searchLoading" class="post-search-panel">
+          <section class="post-search-panel__section">
+            <div class="post-search-panel__head">
+              <h2>历史记录</h2>
+              <el-button v-if="searchHistories.length" link type="info" @click="clearSearchHistories">
+                清除记录
+              </el-button>
+            </div>
+            <div v-if="searchHistories.length" class="post-search-panel__chips">
+              <button v-for="item in searchHistories" :key="item" type="button" @click="submitSearch(item)">
+                {{ item }}
+              </button>
+            </div>
+            <p v-else class="post-search-panel__empty">暂无历史搜索</p>
+          </section>
+
+          <section class="post-search-panel__section">
+            <div class="post-search-panel__head">
+              <h2>猜你搜索</h2>
+            </div>
+            <div class="post-search-panel__grid">
+              <button
+                v-for="item in suggestedSearches"
+                :key="item.keyword"
+                type="button"
+                @click="submitSearch(item.keyword)"
+              >
+                {{ item.keyword }}
+              </button>
+            </div>
+          </section>
+
+          <section class="post-search-panel__section">
+            <div class="post-search-panel__head">
+              <h2>热点搜索</h2>
+            </div>
+            <ol class="post-search-panel__hot">
+              <li v-for="(item, index) in hotSearches" :key="item.keyword">
+                <button type="button" @click="submitSearch(item.keyword)">
+                  <span>{{ index + 1 }}</span>
+                  {{ item.keyword }}
+                </button>
+              </li>
+            </ol>
+          </section>
+        </div>
+      </div>
       <el-radio-group v-model="filters.rank" class="filter-bar__rank" @change="handleFilterChange">
         <el-radio-button value="latest">最新</el-radio-button>
         <el-radio-button value="hot">热门</el-radio-button>
@@ -240,7 +371,8 @@ watch(
 .filter-bar {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  justify-content: center;
+  gap: var(--space-md);
   margin-bottom: var(--space-md);
   flex-wrap: wrap;
 }
@@ -251,12 +383,126 @@ watch(
   flex-wrap: wrap;
   padding-bottom: 2px;
 }
+.search-shell {
+  position: relative;
+  width: min(100%, 560px);
+  max-width: 560px;
+  z-index: 20;
+}
+
 .filter-bar__search {
-  max-width: 320px;
+  width: 100%;
+}
+
+.filter-bar__search :deep(.el-input__wrapper) {
+  min-height: 42px;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
 }
 .filter-bar__rank {
   flex-shrink: 0;
 }
+
+.post-search-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 100%;
+  padding: var(--space-md);
+  background: var(--bg-white);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.post-search-panel__section + .post-search-panel__section {
+  margin-top: var(--space-md);
+}
+
+.post-search-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.post-search-panel__head h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.post-search-panel__chips,
+.post-search-panel__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.post-search-panel__chips button,
+.post-search-panel__grid button,
+.post-search-panel__hot button {
+  border: 0;
+  color: var(--text-regular);
+  cursor: pointer;
+  font: inherit;
+}
+
+.post-search-panel__chips button,
+.post-search-panel__grid button {
+  padding: 6px 12px;
+  background: var(--bg-hover);
+  border-radius: var(--radius-full);
+}
+
+.post-search-panel__chips button:hover,
+.post-search-panel__grid button:hover,
+.post-search-panel__hot button:hover {
+  color: var(--brand-primary);
+}
+
+.post-search-panel__empty {
+  margin: 0;
+  color: var(--text-placeholder);
+  font-size: 13px;
+}
+
+.post-search-panel__hot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm) var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.post-search-panel__hot button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-search-panel__hot span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--brand-primary-light);
+  color: var(--brand-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .post-card__tag {
   cursor: pointer;
   user-select: none;

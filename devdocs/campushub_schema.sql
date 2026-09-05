@@ -5,6 +5,8 @@
 -- 注意：本脚本会 DROP 已有同名表，适合开发初期初始化使用。
 BEGIN;
 DROP TABLE IF EXISTS user_tag_preferences CASCADE;
+DROP TABLE IF EXISTS messages CASCADE;
+DROP TABLE IF EXISTS friendships CASCADE;
 DROP TABLE IF EXISTS comment_likes CASCADE;
 DROP TABLE IF EXISTS histories CASCADE;
 DROP TABLE IF EXISTS favorites CASCADE;
@@ -156,6 +158,34 @@ CREATE TABLE favorites (
   CONSTRAINT favorites_user_post_unique UNIQUE (user_id, post_id)
 );
 
+CREATE TABLE friendships (
+  id BIGSERIAL PRIMARY KEY,
+  requester_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  addressee_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT friendships_status_check CHECK (status IN ('pending', 'accepted', 'rejected')),
+  CONSTRAINT friendships_not_self_check CHECK (requester_id <> addressee_id)
+);
+
+CREATE UNIQUE INDEX friendships_pair_unique
+  ON friendships (
+    LEAST(requester_id, addressee_id),
+    GREATEST(requester_id, addressee_id)
+  );
+
+CREATE TABLE messages (
+  id BIGSERIAL PRIMARY KEY,
+  sender_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  receiver_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT messages_not_self_check CHECK (sender_id <> receiver_id),
+  CONSTRAINT messages_content_not_blank CHECK (length(trim(content)) > 0)
+);
+
 CREATE TABLE histories (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -191,6 +221,15 @@ CREATE INDEX idx_comments_created_at ON comments(created_at);
 CREATE INDEX idx_post_likes_post_id ON post_likes(post_id);
 CREATE INDEX idx_comment_likes_comment_id ON comment_likes(comment_id);
 CREATE INDEX idx_favorites_post_id ON favorites(post_id);
+CREATE INDEX idx_friendships_requester_status ON friendships(requester_id, status);
+CREATE INDEX idx_friendships_addressee_status ON friendships(addressee_id, status);
+CREATE INDEX idx_messages_pair_created_at
+  ON messages (
+    LEAST(sender_id, receiver_id),
+    GREATEST(sender_id, receiver_id),
+    created_at
+  );
+CREATE INDEX idx_messages_receiver_read ON messages(receiver_id, read_at);
 CREATE INDEX idx_histories_user_viewed_at ON histories(user_id, viewed_at DESC);
 
 -- 初始化默认分类

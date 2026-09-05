@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotRound, EditPen } from '@element-plus/icons-vue'
+import { ChatDotRound, EditPen, Message } from '@element-plus/icons-vue'
 import { Github, LifeBuoy, Mail } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 import { clearToken, getToken } from '../api/request'
@@ -16,9 +16,11 @@ const teamMailto = `mailto:${contactEmail}?subject=团队联系`
 const feedbackMailto = `mailto:${contactEmail}?subject=建议与投诉`
 
 const activeMenu = computed(() => route.path)
+const isMessagesPage = computed(() => route.path.startsWith('/messages'))
 const menuItems = [
   { index: '/', label: '首页', icon: ChatDotRound },
   { index: '/post-page', label: '帖子广场', icon: EditPen },
+  { index: '/messages', label: '消息', icon: Message },
 ]
 
 function handleAuthAction() {
@@ -35,7 +37,7 @@ function handleLogout() {
 </script>
 
 <template>
-  <el-container class="layout">
+  <el-container class="layout" :class="{ 'layout--messages': isMessagesPage }">
     <el-header class="layout__header">
       <div class="layout__inner">
         <router-link to="/" class="layout__logo">
@@ -67,11 +69,11 @@ function handleLogout() {
       </div>
     </el-header>
 
-    <el-main class="layout__main">
+    <el-main class="layout__main" :class="{ 'layout__main--messages': isMessagesPage }">
       <router-view />
     </el-main>
 
-    <footer class="site-footer">
+    <footer v-if="!isMessagesPage" class="site-footer">
       <div class="site-footer__inner">
         <div class="site-footer__brand">
           <div class="site-footer__brand-mark" aria-hidden="true">C</div>
@@ -119,6 +121,11 @@ function handleLogout() {
 <style scoped>
 .layout {
   min-height: 100vh;
+}
+
+.layout--messages {
+  height: 100vh;
+  overflow: hidden;
 }
 
 .layout__header {
@@ -177,9 +184,21 @@ function handleLogout() {
   height: 100%;
 }
 
+.layout__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
 .layout__main {
   flex: 1;
   padding: 0;
+}
+
+.layout__main--messages {
+  height: calc(100vh - 60px);
+  overflow: hidden;
 }
 
 .site-footer {
