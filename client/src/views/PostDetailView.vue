@@ -410,7 +410,11 @@ onMounted(async () => {
         </el-dialog>
         <!-- 视频预览弹窗 -->
         <el-dialog v-model="videoVisible" width="80%" top="5vh">
-          <video :src="currentPreviewUrl" controls style="width: 100%" />
+          <video
+            :src="currentPreviewUrl"
+            controls
+            style="max-width: 100%; max-height: 80vh; display: block; margin: 0 auto; background: #000"
+          />
         </el-dialog>
         <div class="detail-card__stats">
           <span
