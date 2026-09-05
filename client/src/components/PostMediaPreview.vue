@@ -80,7 +80,12 @@ function goDetail() {
 
     <!-- 视频播放弹窗 -->
     <el-dialog v-model="videoVisible" title="视频预览" width="80%" top="5vh" append-to-body>
-      <video :src="videoUrl" controls autoplay style="width: 100%" />
+      <video
+        :src="videoUrl"
+        controls
+        autoplay
+        style="max-width: 100%; max-height: 80vh; display: block; margin: 0 auto; background: #000"
+      />
     </el-dialog>
   </div>
 </template>
@@ -94,12 +99,16 @@ function goDetail() {
 }
 .media-preview__item {
   position: relative;
-  width: 76px;
-  height: 76px;
+  width: 228px;
+  height: 228px;
   border-radius: var(--radius-md);
   overflow: hidden;
   cursor: pointer;
   flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+.media-preview__item:not(.media-preview__more):hover {
+  transform: scale(1.05);
 }
 .media-preview__media {
   width: 100%;
@@ -124,7 +133,12 @@ function goDetail() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--brand-primary) 75%, transparent);
+  background: var(--brand-primary);
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+.media-preview__more:hover {
+  opacity: 0.8;
 }
 .media-preview__plus {
   color: var(--bg-white);

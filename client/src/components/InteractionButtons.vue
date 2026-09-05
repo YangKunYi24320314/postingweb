@@ -183,7 +183,7 @@ function toggleCommentLike() {
       :icon="ThumbsUp"
       :size="size"
       :loading="loadingAction === 'postLike'"
-      @click="togglePostLike"
+      @click.stop="togglePostLike"
     >
       {{ innerLiked ? '已点赞' : '点赞' }} {{ innerLikeCount }}
     </el-button>
@@ -194,7 +194,7 @@ function toggleCommentLike() {
       :icon="innerFavorited ? StarFilled : Star"
       :size="size"
       :loading="loadingAction === 'favorite'"
-      @click="toggleFavorite"
+      @click.stop="toggleFavorite"
     >
       {{ innerFavorited ? '已收藏' : '收藏' }} {{ innerFavoriteCount }}
     </el-button>
@@ -205,7 +205,7 @@ function toggleCommentLike() {
       :icon="ThumbsUp"
       :size="size"
       :loading="loadingAction === 'commentLike'"
-      @click="toggleCommentLike"
+      @click.stop="toggleCommentLike"
     >
       {{ innerLiked ? '已点赞' : '点赞评论' }} {{ innerLikeCount }}
     </el-button>

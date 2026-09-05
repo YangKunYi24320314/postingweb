@@ -182,4 +182,42 @@ router.post('/friends/:id/request', auth, async (req, res) => {
   return ok(res, toFriendship(inserted.rows[0]), '好友申请已发送')
 })
 
+// GET /api/friends/status/:userId —— 查看我与某用户的好友关系状态（需登录）
+router.get('/friends/status/:userId', auth, async (req, res) => {
+  const targetUserId = parseUserId(req.params.userId)
+  const currentUserId = Number(req.userId)
+
+  if (!targetUserId) {
+    return fail(res, CODE.PARAM_ERROR, '用户 id 不合法')
+  }
+
+  // 自己看自己
+  if (targetUserId === currentUserId) {
+    return ok(res, { status: 'self' })
+  }
+
+  const result = await pool.query(
+    `SELECT status, requester_id
+     FROM friendships
+     WHERE (requester_id = $1 AND addressee_id = $2)
+        OR (requester_id = $2 AND addressee_id = $1)
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [currentUserId, targetUserId]
+  )
+
+  if (result.rowCount === 0) {
+    return ok(res, { status: 'none' })
+  }
+
+  const row = result.rows[0]
+  if (row.status === 'accepted') {
+    return ok(res, { status: 'friends' })
+  }
+  // pending：判断是谁发起的申请
+  return ok(res, {
+    status: Number(row.requester_id) === currentUserId ? 'pending_sent' : 'pending_received',
+  })
+})
+
 module.exports = router

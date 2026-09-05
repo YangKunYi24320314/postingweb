@@ -11,6 +11,7 @@ async function findPublicUser(pool, userId) {
             u.avatar_url,
             u.background_url,
             u.bio,
+            u.role,
             COUNT(p.id)::int AS post_count,
             (SELECT COALESCE(SUM(pl.like_count), 0)::int FROM posts pl
               WHERE pl.user_id = u.id AND pl.is_deleted = false AND pl.status = 1) AS total_likes,
@@ -20,7 +21,7 @@ async function findPublicUser(pool, userId) {
        LEFT JOIN posts p
          ON p.user_id = u.id AND p.is_deleted = false AND p.status = 1
       WHERE u.id = $1 AND u.status = 1
-      GROUP BY u.id, u.username, u.nickname, u.avatar_url, u.background_url, u.bio`,
+      GROUP BY u.id, u.username, u.nickname, u.avatar_url, u.background_url, u.bio, u.role`,
     [userId]
   )
 
@@ -36,6 +37,7 @@ async function findPublicUser(pool, userId) {
     avatarUrl: user.avatar_url,
     backgroundUrl: user.background_url || null,
     bio: user.bio,
+    role: user.role,
     postCount: Number(user.post_count),
     totalLikes: Number(user.total_likes),
     totalFavorites: Number(user.total_favorites),

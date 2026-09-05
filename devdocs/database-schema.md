@@ -14,6 +14,8 @@ erDiagram
     USERS ||--o{ FAVORITES : "收藏"
     USERS ||--o{ HISTORIES : "浏览"
     USERS ||--o{ USER_TAG_PREF : "偏好(可选)"
+    USERS ||--o{ FRIENDSHIPS : "好友关系"
+    USERS ||--o{ MESSAGES : "私信"
 
     CATEGORIES ||--o{ POSTS : "分类"
     TAGS ||--o{ POST_TAGS : ""
@@ -181,7 +183,31 @@ erDiagram
 | updated_at | TIMESTAMPTZ | 默认 now() | |
 | （唯一约束 user_id + post_id，同一帖子只留一条，重复浏览刷时间） | | | |
 
-## 六、推荐算法（可选，二期）
+## 六、社交（好友 + 私信）
+
+### friendships — 好友关系
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | BIGINT | PK,自增 | |
+| requester_id | BIGINT | FK→users,非空 | 发起申请的人 |
+| addressee_id | BIGINT | FK→users,非空 | 收到申请的人 |
+| status | VARCHAR(20) | 默认 'pending' | pending / accepted / rejected |
+| created_at | TIMESTAMPTZ | 默认 now() | |
+| updated_at | TIMESTAMPTZ | 默认 now() | |
+| （CHECK status ∈ pending/accepted/rejected；CHECK requester_id ≠ addressee_id；唯一索引 (LEAST(requester_id,addressee_id), GREATEST(...)) 保证两人之间只有一条关系） | | | |
+
+### messages — 私信
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | BIGINT | PK,自增 | |
+| sender_id | BIGINT | FK→users,非空 | 发送者 |
+| receiver_id | BIGINT | FK→users,非空 | 接收者 |
+| content | TEXT | 非空 | 消息内容（≤500 字） |
+| read_at | TIMESTAMPTZ | 可空 | 已读时间 |
+| created_at | TIMESTAMPTZ | 默认 now() | |
+| （CHECK sender_id ≠ receiver_id；CHECK length(trim(content)) > 0） | | | |
+
+## 七、推荐算法（可选，二期）
 
 ### user_tag_preferences — 用户偏好标签
 > 可先不建表，用"行为聚合查询"实时算。要缓存、留记录时再建表。
@@ -193,7 +219,7 @@ erDiagram
 | updated_at | TIMESTAMPTZ | 默认 now() | |
 | （联合主键 user_id + tag_id） | | | |
 
-## 七、业务规则（重要，全队看）
+## 八、业务规则（重要，全队看）
 
 1. **计数用冗余字段**：`posts` 里的 `*_count` 在点赞/收藏/评论/浏览**同一个事务里**更新，别每次都 `COUNT()`，会慢。
 2. **帖子用软删除**：删除帖子只是 `is_deleted = true`，不真删，保证历史/收藏/评论仍可查。

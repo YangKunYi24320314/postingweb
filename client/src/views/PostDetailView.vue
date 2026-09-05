@@ -4,7 +4,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { View } from '@element-plus/icons-vue'
+import { View, ArrowLeft, CaretRight } from '@element-plus/icons-vue'
 import { getPostById, deletePost } from '../api/post'
 import { getComments, createComment } from '../api/comments'
 import { reportView } from '../api/record'
@@ -33,6 +33,18 @@ const imageVisible = ref(false)
 const pdfVisible = ref(false)
 const videoVisible = ref(false)
 const currentPreviewUrl = ref('')
+
+// 图片/视频附件（用于正文下方的逐行预览）
+const mediaFiles = computed(() =>
+  (post.value?.attachments || []).filter(
+    (f) => (f.mime_type || '').startsWith('image/') || (f.mime_type || '').startsWith('video/')
+  )
+)
+
+// 附件路径归一化：去掉开头多余斜杠，统一成根相对路径
+function fileUrl(file) {
+  return '/' + String(file.file_path || '').replace(/^\/+/, '')
+}
 
 // 格式化时间：ISO → "2026-09-01 08:54"
 function formatTime(iso) {
@@ -148,11 +160,9 @@ function getFileIcon(mimeType) {
 
 // ===== 附件预览：路径归一化，避免双斜杠导致域名解析失败 =====
 function handlePreview(file) {
-  // 去掉开头所有多余斜杠，统一加一个 /，保证是标准根相对路径
-  const fileUrl = '/' + file.file_path.replace(/^\/+/, '')
-  currentPreviewUrl.value = fileUrl
-  // 【补上这行】拼接完整的绝对地址
-  const fullFileUrl = window.location.origin + fileUrl
+  // 路径归一化，并拼接完整的绝对地址
+  currentPreviewUrl.value = fileUrl(file)
+  const fullFileUrl = window.location.origin + currentPreviewUrl.value
   const type = file.mime_type
   if (type.startsWith('image/')) {
     imageVisible.value = true
@@ -183,16 +193,18 @@ function handleDownload(file) {
   window.open(`/api/attachments/${file.id}/download`, '_blank')
 }
 
-// ===== 返回帖子列表，保留分页页码 =====
+// ===== 返回上一页：有浏览历史就后退；直接输入网址进来则回帖子广场 =====
 const goBack = () => {
-  const fromPage = route.query.page
-  if (fromPage) {
-    // 有来源页码，精准跳回对应分页
-    router.push({ path: '/post-page', query: { page: fromPage } })
+  if (window.history.length > 1) {
+    router.back()
   } else {
-    // 没有来源页码，默认回到第1页
     router.push('/post-page')
   }
+}
+
+// 点击作者昵称 → 跳转到该用户的个人主页
+function goUser(userId) {
+  if (userId != null) router.push(`/user/${userId}`)
 }
 
 // 删除帖子（软删除，仅作者或管理员，删除后回到帖子广场）
@@ -279,7 +291,7 @@ onMounted(async () => {
       <template v-if="post">
         <!-- 返回按钮栏 -->
         <div class="back-bar">
-          <el-button type="primary" text @click="goBack"> ← 返回帖子列表 </el-button>
+          <el-button :icon="ArrowLeft" plain round @click="goBack">返回</el-button>
         </div>
         <div class="detail-card__head">
           <h2 class="detail-card__title">{{ post.title }}</h2>
@@ -311,7 +323,12 @@ onMounted(async () => {
           </el-button>
         </div>
         <div class="detail-card__meta">
-          <span class="detail-card__author">{{ post.user?.nickname || '匿名用户' }}</span>
+          <span class="detail-card__author">
+            <el-avatar :size="24" :src="post.user?.avatarUrl || undefined">
+              {{ post.user?.nickname?.charAt(0) || 'U' }}
+            </el-avatar>
+            <span class="detail-card__nickname" @click="goUser(post.user?.id)">{{ post.user?.nickname || '匿名用户' }}</span>
+          </span>
           <span class="detail-card__time">{{ formatTime(post.createdAt) }}</span>
         </div>
         <div v-if="post.tags && post.tags.length" class="detail-card__tags">
@@ -327,6 +344,34 @@ onMounted(async () => {
           </el-tag>
         </div>
         <div class="detail-card__content">{{ post.content }}</div>
+        <!-- 图片/视频预览（正文下方、附件上方，逐行展示） -->
+        <div v-if="mediaFiles.length" class="detail-card__media">
+          <div
+            v-for="file in mediaFiles"
+            :key="file.id"
+            class="detail-card__media-item"
+            @click="handlePreview(file)"
+          >
+            <img
+              v-if="file.mime_type.startsWith('image/')"
+              :src="fileUrl(file)"
+              class="detail-card__media-img"
+              alt="图片"
+            />
+            <template v-else>
+              <video
+                :src="fileUrl(file)"
+                class="detail-card__media-video"
+                preload="metadata"
+                muted
+                playsinline
+              />
+              <span class="detail-card__media-play">
+                <el-icon><CaretRight /></el-icon>
+              </span>
+            </template>
+          </div>
+        </div>
         <!-- ===== 附件区域：点击文件名预览，点击按钮下载 ===== -->
         <div v-if="post.attachments && post.attachments.length" class="detail-card__attach">
           <h4>📎 附件</h4>
@@ -365,7 +410,11 @@ onMounted(async () => {
         </el-dialog>
         <!-- 视频预览弹窗 -->
         <el-dialog v-model="videoVisible" width="80%" top="5vh">
-          <video :src="currentPreviewUrl" controls style="width: 100%" />
+          <video
+            :src="currentPreviewUrl"
+            controls
+            style="max-width: 100%; max-height: 80vh; display: block; margin: 0 auto; background: #000"
+          />
         </el-dialog>
         <div class="detail-card__stats">
           <span
@@ -464,6 +513,18 @@ onMounted(async () => {
   color: var(--text-secondary);
   font-size: 13px;
 }
+.detail-card__author {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.detail-card__nickname {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.detail-card__nickname:hover {
+  color: var(--brand-primary);
+}
 .detail-card__tags {
   display: flex;
   gap: var(--space-xs);
@@ -476,6 +537,42 @@ onMounted(async () => {
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.8;
+}
+.detail-card__media {
+  margin-top: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.detail-card__media-item {
+  position: relative;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  container-type: inline-size;
+  margin-left: var(--space-xl);
+  margin-right: var(--space-xl);
+}
+.detail-card__media-img,
+.detail-card__media-video {
+  width: 100%;
+  height: auto;
+  max-height: 200cqw;
+  object-fit: cover;
+  display: block;
+}
+.detail-card__media-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-white);
+  font-size: 48px;
+  pointer-events: none;
+}
+.detail-card__media-play .el-icon {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
 }
 .detail-card__attach {
   margin-top: var(--space-lg);
