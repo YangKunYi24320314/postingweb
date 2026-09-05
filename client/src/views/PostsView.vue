@@ -66,6 +66,11 @@ function goUser(userId) {
   if (userId != null) router.push(`/user/${userId}`)
 }
 
+// 点击帖子卡片任意位置 → 跳转详情页，携带当前分页页码
+function goPost(item) {
+  router.push({ path: `/post/${item.id}`, query: { page: page.value } })
+}
+
 // 拉取帖子列表
 async function loadList() {
   loading.value = true
@@ -326,19 +331,14 @@ watch(
         :key="item.id"
         class="post-card"
         :style="{ animationDelay: `${index * 80}ms` }"
+        @click="goPost(item)"
       >
         <div class="post-card__head">
-          <!-- 点击标题跳转详情页，携带当前分页页码 -->
-          <router-link
-            :to="{ path: `/post/${item.id}`, query: { page: page } }"
-            class="post-card__title-link"
-          >
-            <h3 class="post-card__title">{{ item.title }}</h3>
-          </router-link>
+          <h3 class="post-card__title">{{ item.title }}</h3>
           <span class="post-card__category">{{ categoryName(item.categoryId) }}</span>
         </div>
         <div class="post-card__meta">
-          <span class="post-card__author" @click="goUser(item.user?.id)">{{ item.user?.nickname || '匿名用户' }}</span>
+          <span class="post-card__author" @click.stop="goUser(item.user?.id)">{{ item.user?.nickname || '匿名用户' }}</span>
           <span class="post-card__time">{{ formatTime(item.createdAt) }}</span>
         </div>
         <!-- 标签 -->
@@ -349,7 +349,7 @@ watch(
             class="post-card__tag"
             size="small"
             effect="plain"
-            @click="searchByTag(tag)"
+            @click.stop="searchByTag(tag)"
           >
             {{ tag }}
           </el-tag>
@@ -541,6 +541,7 @@ watch(
   padding: var(--space-md) 0;
   border-bottom: 1px solid var(--border-color-light);
   animation: card-fade-in 0.3s ease backwards;
+  cursor: pointer;
 }
 @keyframes card-fade-in {
   from {
