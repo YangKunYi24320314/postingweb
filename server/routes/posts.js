@@ -25,12 +25,10 @@ function parseRank(query) {
   const rank = [...new Set(values.map((item) => String(item).trim()).filter(Boolean))].map((item) =>
     item === 'new' ? 'latest' : item
   )
-
   const allowed = new Set(['latest', 'hot', 'recommend'])
   if (rank.some((item) => !allowed.has(item))) {
     return { error: true }
   }
-
   return { rank: rank.length ? rank : ['latest'] }
 }
 
@@ -66,7 +64,7 @@ function buildPostFilters(query, startIndex = 1) {
           JOIN tags keyword_t ON keyword_t.id = keyword_pt.tag_id
           WHERE keyword_pt.post_id = p.id
             AND keyword_t.name ILIKE $${startIndex + params.length - 1}
-        ))`
+          ))`
     )
   }
 
@@ -80,11 +78,9 @@ function buildRankOrder(rank) {
   if (rank.includes('latest')) {
     scores.push('(100 / (EXTRACT(EPOCH FROM (now() - p.created_at)) / 3600 + 2)) * 2')
   }
-
   if (rank.includes('hot')) {
     scores.push(hotScore)
   }
-
   if (rank.includes('recommend')) {
     scores.push(
       `(CASE WHEN ps.preference_count > 0 THEN COALESCE(pref.recommend_score, 0) * 3 ELSE ${hotScore} * 0.5 END)`
@@ -122,7 +118,7 @@ function toPost(row, isDetail = false) {
     isLiked: row.is_liked,
     isFavorite: row.is_favorite,
     createdAt: row.created_at,
-    // === 新增：附件列表 ===
+    isDeleted: row.is_deleted, // 新增：返回帖子删除状态，供前端判断显示还原按钮
     attachments: row.attachments || [],
   }
   if (isDetail) {
@@ -187,24 +183,29 @@ async function bindAttachments(client, postId, attachmentIds) {
 }
 
 // 查单帖（带作者、是否被我点赞/收藏），isDetail 控制是否要 content
-async function findPost(postId, userId, isDetail) {
+// 新增 isAdmin 参数：管理员可穿透 is_deleted 限制，查看已删除帖子
+async function findPost(postId, userId, isDetail, isAdmin = false) {
+  // 管理员跳过删除过滤，普通用户仅能查看未删除帖子
+  const deleteCondition = isAdmin ? '' : 'AND p.is_deleted = false'
+
   const result = await pool.query(
     `SELECT p.id::int, p.user_id::int, p.title, p.content, p.category_id::int,
-         p.view_count, p.like_count, p.favorite_count, p.comment_count, p.is_pinned, p.created_at,
-         u.id::int AS user_id, u.nickname AS user_nickname, u.avatar_url AS user_avatar_url,
-         EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS is_liked,
-         EXISTS(SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $2) AS is_favorite
-     FROM posts p
-     JOIN users u ON u.id = p.user_id
-     WHERE p.id = $1 AND p.is_deleted = false`,
+        p.view_count, p.like_count, p.favorite_count, p.comment_count, p.is_pinned, p.created_at, p.is_deleted,
+        u.id::int AS user_id, u.nickname AS user_nickname, u.avatar_url AS user_avatar_url,
+        EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS is_liked,
+        EXISTS(SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $2) AS is_favorite
+       FROM posts p
+       JOIN users u ON u.id = p.user_id
+       WHERE p.id = $1 ${deleteCondition}`,
     [postId, userId || 0]
   )
   const row = result.rows[0]
   if (!row) return null
+
   const tags = await getTagsByPostIds([postId])
   row.tags = tags[postId] || []
 
-  // === 修正：查询附件补充 file_path 字段，和数据库表对齐 ===
+  // 附件查询保持原有逻辑不变
   const attachResult = await pool.query(
     'SELECT id, original_filename, file_path, file_size, mime_type FROM post_attachments WHERE post_id = $1 ORDER BY id',
     [postId]
@@ -224,7 +225,6 @@ router.get('/posts', optionalAuth, async (req, res) => {
   if (rankError) {
     return fail(res, CODE.PARAM_ERROR, '排序参数不合法')
   }
-
   if (rank.includes('recommend') && !userId) {
     return fail(res, CODE.UNAUTHORIZED, '请先登录后查看猜你喜欢', 401)
   }
@@ -242,6 +242,7 @@ router.get('/posts', optionalAuth, async (req, res) => {
 
   const listFilter = buildPostFilters(req.query, 2)
   const orderBy = buildRankOrder(rank)
+
   const preferenceSql = rank.includes('recommend')
     ? `
       WITH user_preferences AS (
@@ -261,15 +262,16 @@ router.get('/posts', optionalAuth, async (req, res) => {
           FROM favorites f
           JOIN post_tags pt ON pt.post_id = f.post_id
           WHERE f.user_id = $1
-        ) behavior_tags
+          ) behavior_tags
         WHERE behavior_tags.weight > 0
         GROUP BY behavior_tags.tag_id
-      ),
-      preference_summary AS (
-        SELECT COUNT(*)::int AS preference_count FROM user_preferences
-      )
+        ),
+        preference_summary AS (
+          SELECT COUNT(*)::int AS preference_count FROM user_preferences
+        )
     `
     : ''
+
   const preferenceJoin = rank.includes('recommend')
     ? `
       CROSS JOIN preference_summary ps
@@ -278,18 +280,18 @@ router.get('/posts', optionalAuth, async (req, res) => {
         FROM post_tags pt
         JOIN user_preferences up ON up.tag_id = pt.tag_id
         WHERE pt.post_id = p.id
-      ) pref ON true
+        ) pref ON true
     `
     : 'LEFT JOIN LATERAL (SELECT 0::int AS recommend_score) pref ON true'
 
   const listResult = await pool.query(
     `${preferenceSql}
      SELECT p.id::int, p.user_id::int, p.title, p.category_id::int,
-         p.view_count, p.like_count, p.favorite_count, p.comment_count, p.is_pinned, p.created_at,
-         u.id::int AS user_id, u.nickname, u.avatar_url AS user_avatar_url,
-         c.name AS category_name,
-         EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $1::int) AS is_liked,
-         EXISTS(SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $1::int) AS is_favorite
+        p.view_count, p.like_count, p.favorite_count, p.comment_count, p.is_pinned, p.created_at,
+        u.id::int AS user_id, u.nickname, u.avatar_url AS user_avatar_url,
+        c.name AS category_name,
+        EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $1::int) AS is_liked,
+        EXISTS(SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $1::int) AS is_favorite
      FROM posts p
      JOIN users u ON u.id = p.user_id
      LEFT JOIN categories c ON p.category_id = c.id
@@ -310,12 +312,15 @@ router.get('/posts', optionalAuth, async (req, res) => {
 })
 
 // GET /api/posts/:id —— 帖子详情（公开，需登录场景下带 isLiked/isFavorite）
+// 管理员可查看已删除的帖子
 router.get('/posts/:id', optionalAuth, async (req, res) => {
   const postId = Number(req.params.id)
   if (!isPositiveId(postId)) {
     return fail(res, CODE.PARAM_ERROR, '帖子 id 不合法')
   }
-  const post = await findPost(postId, req.userId, true)
+  // 判断当前登录用户是否为管理员
+  const isAdmin = req.user && req.user.role === 'admin'
+  const post = await findPost(postId, req.userId, true, isAdmin)
   if (!post) {
     return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
   }
@@ -362,9 +367,11 @@ router.post('/posts', auth, async (req, res) => {
       [req.userId, catId, title.trim(), content.trim()]
     )
     postId = inserted.rows[0].id
+
     await bindTags(client, postId, tagNames)
     // === 新增：绑定上传好的附件到帖子 ===
     await bindAttachments(client, postId, attachmentIds)
+
     await client.query('COMMIT')
   } catch (e) {
     await client.query('ROLLBACK')
@@ -426,15 +433,18 @@ router.put('/posts/:id', auth, async (req, res) => {
       'UPDATE posts SET title = COALESCE($1, title), content = COALESCE($2, content), category_id = $3, updated_at = now() WHERE id = $4',
       [title ? title.trim() : null, content ? content.trim() : null, catId, postId]
     )
+
     if (tagNames !== null) {
       await client.query('DELETE FROM post_tags WHERE post_id = $1', [postId])
       await bindTags(client, postId, tagNames)
     }
+
     // === 新增：编辑时传了附件ID就重新绑定 ===
     if (Array.isArray(attachmentIds)) {
       await client.query('DELETE FROM post_attachments WHERE post_id = $1', [postId])
       await bindAttachments(client, postId, attachmentIds)
     }
+
     await client.query('COMMIT')
   } catch (e) {
     await client.query('ROLLBACK')
@@ -461,10 +471,12 @@ router.delete('/posts/:id', auth, async (req, res) => {
     return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
   }
 
-  // 管理员可直接删；普通用户只能删自己的（跟评论模块一致）
-  const actor = await pool.query('SELECT role FROM users WHERE id = $1', [req.userId])
-  const isAdmin = actor.rows[0] && actor.rows[0].role === 'admin'
-  if (existing.rows[0].user_id !== req.userId && !isAdmin) {
+  // 权限校验：作者本人 或 管理员
+  // req.user.role 由 auth 中间件解析注入，无需重复查库
+  const isAuthor = existing.rows[0].user_id === req.userId
+  const isAdmin = req.user?.role === 'admin'
+
+  if (!isAuthor && !isAdmin) {
     return fail(res, CODE.FORBIDDEN, '无权删除该帖子', 403)
   }
 

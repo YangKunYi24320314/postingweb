@@ -5,7 +5,6 @@ const fs = require('fs')
 const multer = require('multer')
 const path = require('path')
 require('dotenv').config()
-
 const { ok, fail, CODE } = require('./utils/response')
 const { UPLOAD_DIR } = require('./utils/avatar-upload')
 
@@ -43,13 +42,20 @@ app.get('/api/hello', (req, res) => {
 })
 
 const routesDir = path.join(__dirname, 'routes')
+
+// ========== 【优先级最高】先加载管理员路由 ==========
+const adminRouter = require(path.join(routesDir, 'admin.js'))
+app.use('/api/admin', adminRouter)
+
+// ========== 再加载普通业务路由 ==========
 fs.readdirSync(routesDir)
-  .filter((file) => file.endsWith('.js'))
+  .filter((file) => file.endsWith('.js') && file !== 'admin.js')
   .forEach((file) => {
     const routeModule = require(path.join(routesDir, file))
     app.use('/api', routeModule)
   })
 
+// ========== 最后放 /api 全局 404 兜底 ==========
 app.use('/api', (req, res) => {
   fail(res, CODE.NOT_FOUND, '接口不存在', 404)
 })
