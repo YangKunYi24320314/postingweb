@@ -217,6 +217,7 @@
 - `POST /posts/:id/view`（需登录）— 进入帖子详情时上报一次浏览
 - `GET /me/history` — 我的浏览记录（分页；可选 `keyword` 参数，对标题/正文/作者昵称做模糊匹配）
 - `DELETE /me/history` — 清空浏览记录
+- `DELETE /me/history/:postId`（需登录）— 删除单条浏览记录（`:postId` 为帖子 id）
 
 ### 7.2 我的内容
 - `GET /me/posts` — 我发布的帖子（分页）

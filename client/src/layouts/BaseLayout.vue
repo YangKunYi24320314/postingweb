@@ -1,11 +1,12 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotRound, EditPen, Message } from '@element-plus/icons-vue'
+import { ChatDotRound, Delete, EditPen, Message } from '@element-plus/icons-vue'
 import { Github, LifeBuoy, Mail } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 import { clearToken, getToken } from '../api/request'
 import { getAuthAction, logout } from '../utils/auth-navigation'
+import { getMe } from '../api/auth' // 引入获取当前用户信息接口
 
 const route = useRoute()
 const router = useRouter()
@@ -17,11 +18,22 @@ const feedbackMailto = `mailto:${contactEmail}?subject=建议与投诉`
 
 const activeMenu = computed(() => route.path)
 const isMessagesPage = computed(() => route.path.startsWith('/messages'))
+const userInfo = ref(null) // 当前登录用户信息，用于管理员权限判断
 const menuItems = [
   { index: '/', label: '首页', icon: ChatDotRound },
   { index: '/post-page', label: '帖子广场', icon: EditPen },
   { index: '/messages', label: '消息', icon: Message },
 ]
+
+// 加载用户信息，判断是否显示管理员菜单
+const loadUserInfo = async () => {
+  if (!getToken()) return
+  try {
+    userInfo.value = await getMe()
+  } catch (err) {
+    // 获取失败不影响主流程，默认隐藏管理员菜单
+  }
+}
 
 function handleAuthAction() {
   router.push(authAction.value.path)
@@ -33,7 +45,13 @@ function handleLogout() {
     navigate: (path) => router.push(path),
   })
   ElMessage.success('已退出登录')
+  // 退出后清空用户信息，隐藏管理员菜单
+  userInfo.value = null
 }
+
+onMounted(() => {
+  loadUserInfo()
+})
 </script>
 
 <template>
@@ -55,6 +73,12 @@ function handleLogout() {
           <el-menu-item v-for="item in menuItems" :key="item.index" :index="item.index">
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
+          </el-menu-item>
+
+          <!-- ========== 新增：管理员专属菜单，仅 admin 角色显示 ========== -->
+          <el-menu-item v-if="userInfo?.role === 'admin'" index="/admin/deleted-posts">
+            <el-icon><Delete /></el-icon>
+            <span>帖子回收站</span>
           </el-menu-item>
         </el-menu>
 
@@ -113,7 +137,7 @@ function handleLogout() {
           </a>
         </nav>
       </div>
-      <div class="site-footer__bottom">校园发帖社区 · 第1组 · © 2026</div>
+      <div class="site-footer__bottom">校园贴吧 · © 2026</div>
     </footer>
   </el-container>
 </template>
@@ -138,7 +162,6 @@ function handleLogout() {
   height: 60px;
   padding: 0;
 }
-
 .layout__inner {
   display: flex;
   align-items: center;
@@ -148,14 +171,12 @@ function handleLogout() {
   padding: 0 var(--space-md);
   height: 100%;
 }
-
 .layout__logo {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   flex-shrink: 0;
 }
-
 .layout__logo-dot,
 .site-footer__brand-mark {
   display: grid;
@@ -165,17 +186,14 @@ function handleLogout() {
   color: var(--bg-white);
   font-weight: 700;
 }
-
 .layout__logo-dot {
   width: 34px;
   height: 34px;
 }
-
 .layout__logo-text {
   font-size: 18px;
   font-weight: 700;
 }
-
 .layout__menu {
   flex: 1;
   min-width: 0;
@@ -205,7 +223,6 @@ function handleLogout() {
   background: var(--footer-bg);
   color: var(--footer-text);
 }
-
 .site-footer__inner {
   display: grid;
   grid-template-columns: minmax(220px, 1.7fr) repeat(3, minmax(120px, 1fr));
@@ -214,38 +231,32 @@ function handleLogout() {
   margin: 0 auto;
   padding: var(--space-2xl) var(--space-md);
 }
-
 .site-footer__brand {
   display: flex;
   align-items: flex-start;
   gap: var(--space-md);
 }
-
 .site-footer__brand-mark {
   width: 40px;
   height: 40px;
   font-size: 18px;
 }
-
 .site-footer__brand-name {
   color: var(--footer-heading);
   font-size: 18px;
   font-weight: 700;
 }
-
 .site-footer__tagline {
   margin-top: var(--space-xs);
   color: var(--footer-muted);
   font-size: 13px;
 }
-
 .site-footer__column h2 {
   margin-bottom: var(--space-md);
   color: var(--footer-heading);
   font-size: 14px;
   font-weight: 600;
 }
-
 .site-footer__link {
   display: inline-flex;
   align-items: center;
@@ -255,17 +266,14 @@ function handleLogout() {
   line-height: 1.5;
   transition: color 160ms ease;
 }
-
 .site-footer__link:hover,
 .site-footer__link:focus-visible {
   color: var(--footer-link-hover);
 }
-
 .site-footer__link:focus-visible {
   outline: 2px solid var(--footer-focus);
   outline-offset: 4px;
 }
-
 .site-footer__bottom {
   max-width: 1200px;
   margin: 0 auto;
@@ -280,20 +288,16 @@ function handleLogout() {
   .layout__inner {
     padding: 0 var(--space-sm);
   }
-
   .layout__menu {
     margin: 0 var(--space-sm);
   }
-
   .layout__logo-text {
     display: none;
   }
-
   .site-footer__inner {
     grid-template-columns: 1fr 1fr;
     gap: var(--space-lg) var(--space-md);
   }
-
   .site-footer__brand {
     grid-column: 1 / -1;
   }
