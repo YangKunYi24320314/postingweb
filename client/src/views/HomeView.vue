@@ -67,7 +67,7 @@ onMounted(loadPosts)
         </div>
       </div>
       <div class="home-hero__signal" aria-hidden="true">
-        <span>一天的开始，从第一篇帖</span>
+        <span>方寸帖子间，万千校园事</span>
       </div>
     </section>
 
@@ -77,9 +77,6 @@ onMounted(loadPosts)
           <span class="section-kicker">DISCOVER</span>
           <h2 id="feed-heading">校园动态</h2>
         </div>
-        <router-link to="/post-page" class="home-feed__all"
-          >查看全部 <span aria-hidden="true">→</span></router-link
-        >
       </div>
 
       <div class="rank-tabs" role="tablist" aria-label="帖子排序">
@@ -192,10 +189,6 @@ onMounted(loadPosts)
 .home-feed h2 {
   margin-top: var(--space-xs);
   font-size: 30px;
-}
-.home-feed__all {
-  color: var(--brand-primary);
-  font-weight: 600;
 }
 .rank-tabs {
   display: grid;
