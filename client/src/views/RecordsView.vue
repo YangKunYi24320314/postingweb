@@ -1,9 +1,9 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { ArrowLeft, Search } from '@element-plus/icons-vue'
-import { getHistory, clearHistory } from '../api/record'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowLeft, Search, Close } from '@element-plus/icons-vue'
+import { getHistory, clearHistory, deleteHistory } from '../api/record'
 
 const router = useRouter()
 
@@ -67,14 +67,47 @@ function goPost(row) {
   router.push(`/post/${row.id}`)
 }
 
+// 删除单条浏览记录（先弹确认框，确认后才删除）
+async function handleDeleteOne(row) {
+  try {
+    await ElMessageBox.confirm('确定删除这条浏览记录吗？', '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return // 用户点了取消，不删除
+  }
+  try {
+    await deleteHistory(row.id)
+    ElMessage.success('已删除该条浏览记录')
+    // 如果当前页只剩这一条且不是第一页，删完回上一页，避免出现空页
+    if (list.value.length === 1 && page.value > 1) {
+      page.value -= 1
+    }
+    loadHistory()
+  } catch (err) {
+    ElMessage.error(err.message || '删除失败')
+  }
+}
+
 // 翻页：换页后重新拉数据
 function handlePageChange(p) {
   page.value = p
   loadHistory()
 }
 
-// 清空浏览记录
+// 清空浏览记录（先弹确认框，确认后才清空）
 async function handleClear() {
+  try {
+    await ElMessageBox.confirm('确定清空所有浏览记录吗？此操作不可恢复。', '清空确认', {
+      confirmButtonText: '清空',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return // 用户点了取消，不清空
+  }
   try {
     await clearHistory()
     ElMessage.success('已清空浏览记录')
@@ -118,11 +151,9 @@ onMounted(() => {
             :prefix-icon="Search"
           />
         </div>
-        <el-popconfirm title="确定清空所有浏览记录吗？" @confirm="handleClear">
-          <template #reference>
-            <el-button type="danger" plain :disabled="total === 0">清空浏览记录</el-button>
-          </template>
-        </el-popconfirm>
+        <el-button type="danger" plain :disabled="total === 0" @click="handleClear">
+          清空浏览记录
+        </el-button>
       </div>
 
       <el-table
@@ -144,6 +175,18 @@ onMounted(() => {
         <el-table-column label="浏览时间" width="170">
           <template #default="{ row }">
             {{ formatTime(row.viewedAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column width="48" align="center">
+          <template #default="{ row }">
+            <el-button
+              class="record-delete-btn"
+              text
+              size="small"
+              type="danger"
+              :icon="Close"
+              @click.stop="handleDeleteOne(row)"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -188,6 +231,15 @@ onMounted(() => {
 }
 :deep(.el-table__row:hover .el-table__cell .cell) {
   transform: translateX(-6px);
+}
+
+/* 单条删除「×」按钮：默认隐藏，悬停行时显示 */
+.record-delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+:deep(.el-table__row:hover .record-delete-btn) {
+  opacity: 1;
 }
 
 .records__topbar {

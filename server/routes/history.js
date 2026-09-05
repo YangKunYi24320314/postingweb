@@ -143,4 +143,18 @@ router.delete('/me/history', auth, async (req, res) => {
   return ok(res, null)
 })
 
+// DELETE /api/me/history/:postId —— 删除单条浏览记录（需登录）
+router.delete('/me/history/:postId', auth, async (req, res) => {
+  const postId = parseInt(req.params.postId, 10)
+  if (!Number.isInteger(postId) || postId <= 0) {
+    return fail(res, CODE.PARAM_ERROR, '帖子 id 不合法')
+  }
+  // 只删"当前用户"对该帖子的那条记录（user_id + post_id 唯一，最多删一条）
+  await pool.query('DELETE FROM histories WHERE user_id = $1 AND post_id = $2', [
+    req.userId,
+    postId,
+  ])
+  return ok(res, null)
+})
+
 module.exports = router

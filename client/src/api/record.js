@@ -17,6 +17,11 @@ export function clearHistory() {
   return request.delete('/me/history')
 }
 
+// 删除单条浏览记录（传帖子 id）
+export function deleteHistory(postId) {
+  return request.delete(`/me/history/${postId}`)
+}
+
 // 我发布的帖子
 export function getMyPosts(params) {
   return request.get('/me/posts', { params })
