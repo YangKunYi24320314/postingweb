@@ -309,36 +309,33 @@ watch(
   left: 0;
   right: 0;
   height: 66.66%;
-  /* 上层：白色扫光；下层：很淡的品牌蓝遮罩（恢复层次，不随扫光移动） */
-  background:
-    linear-gradient(
-      115deg,
-      transparent 40%,
-      color-mix(in srgb, var(--bg-white) 30%, transparent) 50%,
-      transparent 60%
-    ),
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--brand-primary) 20%, transparent) 0%,
-      transparent 50%,
-      color-mix(in srgb, var(--brand-primary) 20%, transparent) 100%
-    );
-  background-size: 300% 100%, 200% 200%;
+  background: linear-gradient(
+    135deg,
+    var(--brand-primary) 0%,
+    transparent 40%,
+    transparent 60%,
+    var(--brand-primary) 100%
+  );
+  background-size: 200% 200%;
+  opacity: 0.7;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
-  animation: profile-shine 5s ease-in-out infinite;
+  animation: profile-gradient-flow 7s ease-in-out infinite;
   pointer-events: none;
 }
 .profile__info :deep(.el-card__body) {
   position: relative;
   z-index: 1;
 }
-@keyframes profile-shine {
+@keyframes profile-gradient-flow {
   0% {
-    background-position: 100% 0, 0% 50%;
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
   }
   100% {
-    background-position: 0% 0, 0% 50%;
+    background-position: 0% 50%;
   }
 }
 
