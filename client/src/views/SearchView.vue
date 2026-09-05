@@ -686,6 +686,9 @@ watch(
   cursor: pointer;
   text-align: left;
 }
+.user-result__profile :deep(.el-avatar) {
+  flex-shrink: 0;
+}
 
 .user-result__profile span {
   display: grid;
@@ -703,6 +706,11 @@ watch(
   color: var(--text-secondary);
   font-size: 13px;
   font-style: normal;
+}
+.user-result__profile em {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .search-pagination {
