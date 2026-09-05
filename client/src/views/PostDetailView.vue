@@ -308,7 +308,12 @@ onMounted(async () => {
           </el-button>
         </div>
         <div class="detail-card__meta">
-          <span class="detail-card__author">{{ post.user?.nickname || '匿名用户' }}</span>
+          <span class="detail-card__author">
+            <el-avatar :size="24" :src="post.user?.avatarUrl || undefined">
+              {{ post.user?.nickname?.charAt(0) || 'U' }}
+            </el-avatar>
+            <span>{{ post.user?.nickname || '匿名用户' }}</span>
+          </span>
           <span class="detail-card__time">{{ formatTime(post.createdAt) }}</span>
         </div>
         <div v-if="post.tags && post.tags.length" class="detail-card__tags">
@@ -460,6 +465,11 @@ onMounted(async () => {
   margin-top: var(--space-sm);
   color: var(--text-secondary);
   font-size: 13px;
+}
+.detail-card__author {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 .detail-card__tags {
   display: flex;
