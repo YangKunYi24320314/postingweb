@@ -1,10 +1,10 @@
 # 局域网服务器部署与联机指南
 
-> 本文档说明：**如何把任意一台组员的电脑变成"一台可访问服务器"**，其他人（包括 PM）在同一局域网内通过浏览器直接访问。
+> 本文档说明：**如何把任意一台组员的电脑变成"一台可访问服务器"**，在同一局域网内通过浏览器直接访问。
 > 方案 B（单端口发布）：后端 Express 同时托管「编译后的前端 `client/dist`」和「`/api` 接口」，所以**不需要跑 vite**，一台机器只开放一个 `3000` 端口。
 > 依赖：Node.js ≥ 18、PostgreSQL；服务器机器需联网（同一 WiFi/网段）。
 
-## 0. 一句话原理
+## 0. 原理
 
 ```
 组员电脑A(服务器):  Express(托管 client/dist + /api) + PostgreSQL(本地 campushub)  →  监听 3000
@@ -76,7 +76,7 @@ npm start              # 只启动后端（node server.js）
 
 ---
 
-## 3. 访问者视角（客户端，如 PM）
+## 3. 访问者视角
 
 1. 确保与服务器在**同一 WiFi / 同一网段**（用 `ipconfig` 看 IPv4 是否为同网段）。
 2. 浏览器打开 `http://<服务器IP>:3000`，如 `http://192.168.10.45:3000`。
@@ -106,12 +106,3 @@ npm start              # 只启动后端（node server.js）
 
 ---
 
-## 5. 我改了什么（本次方案 B 落地）
-
-- `server/server.js`：
-  - 旧版 `/upload` 不再写死 `http://127.0.0.1:3000/...`，改为用请求方 host 拼地址（`req.protocol://req.get('host')/static/...`）。
-  - 新增：托管前端 `client/dist` + SPA 回退 + `/api` 404 统一返回；`PORT` 从 `.env` 读取（默认 3000）。
-  - 清理了打印数据库密码的调试日志。
-- `server/.env copy.example` → `server/.env.example`（规范命名）。
-- 新增 `server/serve-lan.ps1` 一键脚本：打印局域网 IP + 放行防火墙 + 启动后端。
-- `server/package.json`：新增 `serve:lan` 脚本。
