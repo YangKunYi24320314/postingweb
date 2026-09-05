@@ -147,24 +147,14 @@ router.post('/auth/login', async (req, res) => {
 
 // GET /api/auth/me —— 获取当前登录用户（需登录）
 router.get('/auth/me', auth, async (req, res) => {
-  try {
-    console.log('✅ auth中间件传递的userId:', req.userId)
-    const result = await pool.query(
-      'SELECT id, username, nickname, avatar_url, bio, role FROM users WHERE id = $1 AND status = 1',
-      [req.userId]
-    )
-    console.log('✅ 查询到的用户:', result.rows[0])
-    
-    if (result.rowCount === 0) {
-      return fail(res, CODE.NOT_FOUND, '用户不存在', 404)
-    }
-    
-    // 先直接返回原始用户，跳过toUser，验证是不是toUser的问题
-    return ok(res, result.rows[0])
-  } catch (e) {
-    console.error('❌ /auth/me 接口错误:', e.message)
-    return fail(res, CODE.SERVER_ERROR, '服务器内部错误', 500)
+  const result = await pool.query(
+    'SELECT id, username, nickname, avatar_url, bio, role, phone, email FROM users WHERE id = $1 AND status = 1',
+    [req.userId]
+  )
+  if (result.rowCount === 0) {
+    return fail(res, CODE.NOT_FOUND, '用户不存在', 404)
   }
+  return ok(res, toUser(result.rows[0]))
 })
 
 // PUT /api/auth/profile —— 更新个人信息（需登录）

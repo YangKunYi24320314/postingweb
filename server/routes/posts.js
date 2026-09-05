@@ -191,7 +191,7 @@ async function findPost(postId, userId, isDetail, isAdmin = false) {
   const result = await pool.query(
     `SELECT p.id::int, p.user_id::int, p.title, p.content, p.category_id::int,
         p.view_count, p.like_count, p.favorite_count, p.comment_count, p.is_pinned, p.created_at, p.is_deleted,
-        u.id::int AS user_id, u.nickname AS user_nickname, u.avatar_url AS user_avatar_url,
+        u.id::int AS user_id, u.nickname, u.avatar_url AS user_avatar_url,
         EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS is_liked,
         EXISTS(SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $2) AS is_favorite
        FROM posts p
