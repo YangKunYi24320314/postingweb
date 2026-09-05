@@ -61,6 +61,11 @@ function categoryName(id) {
   return found ? found.name : '未分类'
 }
 
+// 点击作者昵称 → 跳转到该用户的个人主页
+function goUser(userId) {
+  if (userId != null) router.push(`/user/${userId}`)
+}
+
 // 拉取帖子列表
 async function loadList() {
   loading.value = true
@@ -333,7 +338,7 @@ watch(
           <span class="post-card__category">{{ categoryName(item.categoryId) }}</span>
         </div>
         <div class="post-card__meta">
-          <span class="post-card__author">{{ item.user?.nickname || '匿名用户' }}</span>
+          <span class="post-card__author" @click="goUser(item.user?.id)">{{ item.user?.nickname || '匿名用户' }}</span>
           <span class="post-card__time">{{ formatTime(item.createdAt) }}</span>
         </div>
         <!-- 标签 -->
@@ -576,6 +581,13 @@ watch(
   margin-top: var(--space-xs);
   color: var(--text-secondary);
   font-size: 13px;
+}
+.post-card__author {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.post-card__author:hover {
+  color: var(--brand-primary);
 }
 .post-card__tags {
   display: flex;

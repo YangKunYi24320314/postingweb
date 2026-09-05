@@ -192,6 +192,11 @@ const goBack = () => {
   }
 }
 
+// 点击作者昵称 → 跳转到该用户的个人主页
+function goUser(userId) {
+  if (userId != null) router.push(`/user/${userId}`)
+}
+
 // 删除帖子（软删除，仅作者或管理员，删除后回到帖子广场）
 async function handleDelete() {
   try {
@@ -312,7 +317,7 @@ onMounted(async () => {
             <el-avatar :size="24" :src="post.user?.avatarUrl || undefined">
               {{ post.user?.nickname?.charAt(0) || 'U' }}
             </el-avatar>
-            <span>{{ post.user?.nickname || '匿名用户' }}</span>
+            <span class="detail-card__nickname" @click="goUser(post.user?.id)">{{ post.user?.nickname || '匿名用户' }}</span>
           </span>
           <span class="detail-card__time">{{ formatTime(post.createdAt) }}</span>
         </div>
@@ -470,6 +475,13 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
+}
+.detail-card__nickname {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.detail-card__nickname:hover {
+  color: var(--brand-primary);
 }
 .detail-card__tags {
   display: flex;
