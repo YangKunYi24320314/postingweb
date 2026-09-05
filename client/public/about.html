@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>项目介绍 · PostWEB 校园发帖社区</title>
+    <style>
+      /*
+       * 本页为独立静态页（/about.html），无法通过 Vite 构建引用 tokens.css，
+       * 因此在此处复刻 src/styles/tokens.css 里的设计变量（唯一设计变量来源），
+       * 保证风格与整个前端一致。页面样式一律使用下面这些变量，不写死魔法值。
+       */
+      :root {
+        --brand-primary: #3a6df0;
+        --brand-primary-hover: #2e57c0;
+        --brand-primary-light: #ecf1fe;
+        --brand-gradient: linear-gradient(135deg, #3a6df0 0%, #5b8cff 100%);
+        --color-success: #22c55e;
+        --color-warning: #f59e0b;
+        --color-danger: #ef4444;
+        --color-info: #64748b;
+        --text-primary: #1f2937;
+        --text-regular: #374151;
+        --text-secondary: #6b7280;
+        --text-placeholder: #9ca3af;
+        --border-color: #e5e7eb;
+        --border-color-light: #f3f4f6;
+        --bg-page: #f5f7fa;
+        --bg-white: #ffffff;
+        --bg-hover: #f9fafb;
+        --space-xs: 4px;
+        --space-sm: 8px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+        --space-2xl: 48px;
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-full: 999px;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08);
+        --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+        --font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', Arial,
+          sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        font-family: var(--font-family);
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--text-primary);
+        background-color: var(--bg-page);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      ul {
+        list-style: none;
+      }
+
+      .page {
+        width: 100%;
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: var(--space-xl) var(--space-md) var(--space-2xl);
+      }
+
+      .hero {
+        padding: var(--space-2xl) var(--space-lg);
+        border-radius: var(--radius-lg);
+        background: var(--brand-gradient);
+        color: #ffffff;
+        box-shadow: var(--shadow-md);
+        text-align: center;
+      }
+
+      .hero__eyebrow {
+        display: inline-block;
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: var(--radius-full);
+        background: rgba(255, 255, 255, 0.18);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+      }
+
+      .hero h1 {
+        margin-top: var(--space-md);
+        font-size: clamp(28px, 4vw, 44px);
+        line-height: 1.2;
+      }
+
+      .hero p {
+        margin-top: var(--space-md);
+        max-width: 640px;
+        margin-left: auto;
+        margin-right: auto;
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.92);
+      }
+
+      .hero__link {
+        display: inline-block;
+        margin-top: var(--space-lg);
+        padding: var(--space-sm) var(--space-lg);
+        border-radius: var(--radius-full);
+        background: #ffffff;
+        color: var(--brand-primary);
+        font-weight: 600;
+        transition: transform 160ms ease, box-shadow 160ms ease;
+      }
+
+      .hero__link:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+      }
+
+      .section {
+        margin-top: var(--space-2xl);
+      }
+
+      .section__heading {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+      }
+
+      .section__heading::before {
+        content: '';
+        width: 6px;
+        height: 22px;
+        border-radius: var(--radius-sm);
+        background: var(--brand-primary);
+      }
+
+      .section h2 {
+        font-size: 24px;
+      }
+
+      .section__desc {
+        margin-top: var(--space-sm);
+        color: var(--text-secondary);
+      }
+
+      .card {
+        margin-top: var(--space-md);
+        padding: var(--space-lg);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        background: var(--bg-white);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-md);
+        margin-top: var(--space-md);
+      }
+
+      .feature {
+        padding: var(--space-lg);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        background: var(--bg-white);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .feature h3 {
+        font-size: 17px;
+        color: var(--brand-primary);
+      }
+
+      .feature p {
+        margin-top: var(--space-sm);
+        color: var(--text-secondary);
+      }
+
+      .stack-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-md);
+        margin-top: var(--space-md);
+      }
+
+      .stack-item {
+        padding: var(--space-lg);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        background: var(--bg-white);
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .stack-item strong {
+        display: block;
+        font-size: 17px;
+      }
+
+      .stack-item span {
+        display: block;
+        margin-top: var(--space-xs);
+        color: var(--text-secondary);
+        font-size: 13px;
+      }
+
+      .list {
+        display: grid;
+        gap: var(--space-sm);
+        margin-top: var(--space-md);
+      }
+
+      .list li {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-sm);
+        color: var(--text-regular);
+      }
+
+      .list li::before {
+        content: '✓';
+        flex-shrink: 0;
+        color: var(--color-success);
+        font-weight: 700;
+      }
+
+      .footer {
+        margin-top: var(--space-2xl);
+        padding: var(--space-lg);
+        border-radius: var(--radius-lg);
+        background: #101733;
+        color: #c1cbe5;
+        text-align: center;
+      }
+
+      .footer a {
+        color: #ffffff;
+        font-weight: 600;
+      }
+
+      @media (max-width: 640px) {
+        .feature-grid,
+        .stack-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <span class="hero__eyebrow">CAMPUS HUB</span>
+        <h1>PostWEB · 校园发帖社区</h1>
+        <p>
+          一个给大学校园打造的发帖社区论坛。在这里分享校园生活、发布帖子、参与讨论，找到同频的
+          交流与灵感。
+        </p>
+        <a class="hero__link" href="/">进入社区 →</a>
+      </header>
+
+      <section class="section">
+        <div class="section__heading">
+          <h2>我们想做什么</h2>
+        </div>
+        <p class="section__desc">
+          校园里的信息常常分散在各大群里，难以沉淀和检索。PostWEB 想把它们汇聚到一个可浏览、可
+          互动、可追溯的社区里，让校园分享更有秩序。
+        </p>
+        <div class="card">
+          <ul class="list">
+            <li>轻松浏览与发现：分类、标签、关键词搜索，以及按最新 / 热门 / 推荐多种方式排序。</li>
+            <li>自由表达：发布帖子、上传附件，内容沉淀下来随时可查。</li>
+            <li>热闹的互动：评论、楼中楼回复、点赞与收藏，让讨论更有温度。</li>
+            <li>专属记录中心：浏览历史、我的内容，以及头像与背景图等个人设置。</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section__heading">
+          <h2>核心功能模块</h2>
+        </div>
+        <div class="feature-grid">
+          <div class="feature">
+            <h3>用户与认证</h3>
+            <p>注册、登录、个人信息管理，使用 JWT 保障账号安全。</p>
+          </div>
+          <div class="feature">
+            <h3>帖子核心</h3>
+            <p>发布、删除、筛选、搜索，支持附件上传与下载，列表多因子排序。</p>
+          </div>
+          <div class="feature">
+            <h3>互动系统</h3>
+            <p>评论与楼中楼回复、点赞、收藏，让交流更丰富。</p>
+          </div>
+          <div class="feature">
+            <h3>记录中心</h3>
+            <p>浏览历史、我的内容、头像与背景图设置，以及收获统计。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section__heading">
+          <h2>技术栈</h2>
+        </div>
+        <div class="stack-grid">
+          <div class="stack-item">
+            <strong>Vue 3 + Vite</strong>
+            <span>前端 · Element Plus</span>
+          </div>
+          <div class="stack-item">
+            <strong>Node.js + Express</strong>
+            <span>后端 API</span>
+          </div>
+          <div class="stack-item">
+            <strong>PostgreSQL</strong>
+            <span>数据库</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section__heading">
+          <h2>关于本项目</h2>
+        </div>
+        <div class="card">
+          <p class="section__desc">
+            这是短学期课程里由 5 名成员（4 名开发 + 1 名 PM）从零协作开发的实践项目，旨在用一套
+            清晰的契约（接口协议、数据库设计、统一设计变量）把多人协作的复杂度降到最低。
+          </p>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p>PostWEB · 校园发帖社区 — 欢迎回来看看</p>
+        <p style="margin-top: var(--space-xs)">
+          <a href="/">返回首页</a>
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

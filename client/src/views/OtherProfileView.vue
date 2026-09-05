@@ -245,9 +245,15 @@ watch(
         <!-- 附件图片/视频预览（一直展示，位于正文预览下方） -->
         <PostMediaPreview :attachments="row.attachments || []" :post-id="row.id" />
         <div class="profile-post-card__stats">
-          <span><el-icon><View /></el-icon> {{ row.viewCount }}</span>
-          <span><el-icon><ChatDotRound /></el-icon> {{ row.commentCount }}</span>
-          <span><el-icon><ThumbsUp /></el-icon> {{ row.likeCount }}</span>
+          <span
+            ><el-icon><View /></el-icon> {{ row.viewCount }}</span
+          >
+          <span
+            ><el-icon><ChatDotRound /></el-icon> {{ row.commentCount }}</span
+          >
+          <span
+            ><el-icon><ThumbsUp /></el-icon> {{ row.likeCount }}</span
+          >
         </div>
       </div>
 
@@ -323,7 +329,9 @@ watch(
       transparent 50%,
       color-mix(in srgb, var(--brand-primary) 20%, transparent) 100%
     );
-  background-size: 300% 100%, 200% 200%;
+  background-size:
+    300% 100%,
+    200% 200%;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
   animation: profile-shine 5s ease-in-out infinite;
@@ -335,10 +343,14 @@ watch(
 }
 @keyframes profile-shine {
   0% {
-    background-position: 100% 0, 0% 50%;
+    background-position:
+      100% 0,
+      0% 50%;
   }
   100% {
-    background-position: 0% 0, 0% 50%;
+    background-position:
+      0% 0,
+      0% 50%;
   }
 }
 
@@ -515,7 +527,10 @@ watch(
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.6;
-  transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease;
+  transition:
+    max-height 0.25s ease,
+    opacity 0.25s ease,
+    margin-top 0.25s ease;
 }
 .profile-post-card:hover .profile-post-card__preview {
   max-height: 140px;
