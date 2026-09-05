@@ -180,7 +180,18 @@ watch(
         </el-avatar>
       </div>
       <div class="info__identity">
-        <div class="info__nickname">{{ user?.nickname || '未设置昵称' }}</div>
+        <div class="info__nickname">
+          <span>{{ user?.nickname || '未设置昵称' }}</span>
+          <el-tag
+            v-if="user?.role === 'admin'"
+            type="primary"
+            effect="dark"
+            size="small"
+            class="info__admin-tag"
+          >
+            管理员
+          </el-tag>
+        </div>
         <div class="info__username">{{ user ? '@' + user.username : '' }}</div>
       </div>
       <div class="info__bio">{{ user?.bio || '这个人很懒，什么都没有写' }}</div>
@@ -388,10 +399,17 @@ watch(
   -webkit-backdrop-filter: blur(6px);
 }
 .info__nickname {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
   font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.2;
+}
+.info__admin-tag {
+  border-radius: var(--radius-full);
+  opacity: 0.8;
 }
 .info__username {
   font-size: 12px;

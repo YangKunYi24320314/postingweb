@@ -149,6 +149,7 @@ paths:
                           avatarUrl: { type: string, nullable: true }
                           backgroundUrl: { type: string, nullable: true }
                           bio: { type: string, nullable: true }
+                          role: { type: string }
                           postCount: { type: integer }
                           totalLikes: { type: integer }
                           totalFavorites: { type: integer }

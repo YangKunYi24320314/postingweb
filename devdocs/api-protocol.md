@@ -84,7 +84,7 @@
   "id": 1, "username": "24320326", "nickname": "昵称",
   "avatarUrl": "http://host/static/avatars/xxx.png",
   "backgroundUrl": "http://host/static/backgrounds/xxx.jpg",
-  "bio": "简介", "postCount": 3, "totalLikes": 12, "totalFavorites": 5
+  "bio": "简介", "role": "user", "postCount": 3, "totalLikes": 12, "totalFavorites": 5
 }
 ```
 
