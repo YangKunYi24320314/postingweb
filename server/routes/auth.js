@@ -266,9 +266,10 @@ router.get('/users/:id', async (req, res) => {
 
 // ========== 管理员测试接口（验证权限用） ==========
 // 可用来快速验证管理员角色是否生效
-router.get('/auth/admin/test', auth, authAdmin, async (req, res) => {
-  ok(res, { message: '管理员权限验证通过', user: req.user })
-})
+// 【上线注释】该调试接口已注释；如需本地验证权限可取消注释
+// router.get('/auth/admin/test', auth, authAdmin, async (req, res) => {
+//   ok(res, { message: '管理员权限验证通过', user: req.user })
+// })
 
 module.exports = router
 module.exports.handleAuthError = handleAuthError

@@ -322,7 +322,85 @@
 
 ---
 
-## 十、给后端/前端的提示
+## 十、好友 Friends（社交模块）
+
+### 10.1 `GET /friends` — 好友列表（需登录）
+**响应 data**：数组，元素含好友基本信息 + 最后一条消息预览：
+```json
+{ "id": 2, "username": "scu123", "nickname": "昵称", "avatarUrl": "...", "bio": "...", "friendsAt": "...", "lastMessage": "...", "lastMessageAt": "..." }
+```
+
+### 10.2 `GET /friends/requests` — 收到的好友申请（需登录）
+**响应 data**：数组，元素为待处理申请：
+```json
+{ "id": 1, "status": "pending", "createdAt": "...", "requester": { "id": 3, "username": "scu456", "nickname": "昵称", "avatarUrl": "...", "bio": "..." } }
+```
+
+### 10.3 `POST /friends/:id/request` — 向某用户发起好友申请（需登录）
+**响应 data**：好友关系对象 `{ id, requesterId, addresseeId, status, createdAt, updatedAt }`。
+
+### 10.4 `POST /friends/requests/:id/accept` — 同意好友申请（需登录）
+**响应 data**：好友关系对象（status 变为 `accepted`）。
+
+### 10.5 `GET /friends/status/:userId` — 查看我与某用户的好友关系（需登录）
+**响应 data**：`{ "status": "none" }`，取值 `none`（无关系）/ `self`（自己）/ `friends`（已为好友）/ `pending_sent`（我已申请）/ `pending_received`（对方已申请）。
+
+---
+
+## 十一、私信 Messages（社交模块）
+
+### 11.1 `GET /messages/conversations/:friendId` — 与某好友的聊天记录（需登录）
+**响应 data**：`{ friend, list }`，`friend` 为好友信息，`list` 为消息数组（最多 100 条，按时间正序）：
+```json
+{ "id": 1, "senderId": 1, "receiverId": 2, "content": "你好", "createdAt": "...", "readAt": null, "mine": true }
+```
+
+### 11.2 `POST /messages/conversations/:friendId` — 发送消息（需登录）
+**请求**：`{ "content": "消息内容" }`（非空，≤500 字）
+**响应 data**：新消息对象（同 11.1 单条结构，`mine: true`）。
+
+---
+
+## 十二、搜索 Search
+
+### 12.1 `GET /search/posts` — 搜索帖子（公开）
+**请求**：`keyword`（为空返回全部）、`rank`（`all`/`latest`/`hot`）、`page`、`pageSize`
+**响应 data**：分页 `{ list, total, page, pageSize }`，`list` 项复用 `Post` 结构（含 `content`、`attachments`、`isLiked`、`isFavorite`）。
+
+### 12.2 `GET /search/users` — 搜索用户（公开）
+**请求**：`keyword`（为空返回全部）、`page`、`pageSize`
+**响应 data**：分页 `{ list, total, page, pageSize }`，`list` 项：
+```json
+{ "id": 3, "username": "scu456", "nickname": "昵称", "avatarUrl": "...", "bio": "...", "postCount": 5, "friendshipStatus": "none" }
+```
+
+### 12.3 `GET /search/hot` — 热门搜索（公开）
+**响应 data**：数组 `[ { "keyword": "考研", "score": 10 } ]`。
+
+### 12.4 `GET /search/suggestions` — 搜索建议（公开）
+**响应 data**：数组 `[ { "keyword": "考研", "score": 10 } ]`。
+
+---
+
+## 十三、管理员 Admin（需登录 + admin 角色）
+
+> 所有 `/admin/*` 接口都要求管理员角色（`auth` + `authAdmin`）。
+
+### 13.1 `GET /admin/ping` — 连通性测试
+**响应**：`{ "code": 0, "message": "admin 路由正常" }`。
+
+### 13.2 `GET /admin/posts/deleted` — 已删除帖子列表（分页）
+**响应 data**：`{ list, total, page, pageSize }`，`list` 项含 `id/title/user_id/updated_at/author_name`。
+
+### 13.3 `GET /admin/posts/:id` — 已删除帖子详情
+**响应 data**：帖子完整字段（含 `attachments` 附件数组）。
+
+### 13.4 `PUT /admin/posts/:id/restore` — 还原已删除帖子
+**响应 data**：`null`（还原成功）。
+
+---
+
+## 十四、给后端/前端的提示
 
 1. **后端实现顺序建议**：`auth` → `posts` → `comments` → `like/favorite` → `history` → `attachments` → `recommend`。
 2. **前端调接口**：永远通过封装好的 `src/api/xxx.js`，不要在页面里直接写请求（见前端架构约定）。
