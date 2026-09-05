@@ -300,7 +300,7 @@ watch(
   pointer-events: none;
 }
 .profile__info--bg-loaded::before {
-  opacity: 0.85;
+  opacity: 0.6;
 }
 .profile__info::after {
   content: '';
@@ -312,12 +312,11 @@ watch(
   background: linear-gradient(
     135deg,
     var(--brand-primary) 0%,
-    transparent 40%,
-    transparent 60%,
+    transparent 50%,
     var(--brand-primary) 100%
   );
   background-size: 200% 200%;
-  opacity: 0.7;
+  opacity: 0.5;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
   animation: profile-gradient-flow 7s ease-in-out infinite;
