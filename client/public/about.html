@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>项目介绍 · PostWEB 校园发帖社区</title>
+    <title>项目介绍 · CampusHub 校园社区</title>
     <style>
       /*
        * 本页为独立静态页（/about.html），无法通过 Vite 构建引用 tokens.css，
@@ -118,6 +118,12 @@
         margin-right: auto;
         font-size: 16px;
         color: rgba(255, 255, 255, 0.92);
+      }
+
+      .hero__note {
+        margin-top: var(--space-md);
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.85);
       }
 
       .hero__link {
@@ -245,6 +251,49 @@
         font-weight: 700;
       }
 
+      .doc-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-md);
+        margin-top: var(--space-md);
+      }
+
+      .doc-card {
+        display: block;
+        padding: var(--space-lg);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        background: var(--bg-white);
+        box-shadow: var(--shadow-sm);
+        transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+      }
+
+      .doc-card:hover,
+      .doc-card:focus-visible {
+        border-color: var(--brand-primary-light);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+      }
+
+      .doc-card__title {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--brand-primary);
+      }
+
+      .doc-card__title span {
+        font-size: 20px;
+      }
+
+      .doc-card p {
+        margin-top: var(--space-sm);
+        color: var(--text-secondary);
+        font-size: 13px;
+      }
+
       .footer {
         margin-top: var(--space-2xl);
         padding: var(--space-lg);
@@ -261,7 +310,8 @@
 
       @media (max-width: 640px) {
         .feature-grid,
-        .stack-grid {
+        .stack-grid,
+        .doc-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -271,12 +321,15 @@
     <main class="page">
       <header class="hero">
         <span class="hero__eyebrow">CAMPUS HUB</span>
-        <h1>PostWEB · 校园发帖社区</h1>
+        <h1>校园社区</h1>
         <p>
-          一个给大学校园打造的发帖社区论坛。在这里分享校园生活、发布帖子、参与讨论，找到同频的
+          定制化打造的发帖社区论坛。在这里分享校园生活、发布帖子、参与讨论，找到同频的
           交流与灵感。
         </p>
-        <a class="hero__link" href="/">进入社区 →</a>
+        <p class="hero__note">
+          项目名称 CampusHub；仓库开发代号 PostWEB（见下方 GitHub 仓库）。
+        </p>
+        <a class="hero__link" href="/">回到首页 →</a>
       </header>
 
       <section class="section">
@@ -284,15 +337,14 @@
           <h2>我们想做什么</h2>
         </div>
         <p class="section__desc">
-          校园里的信息常常分散在各大群里，难以沉淀和检索。PostWEB 想把它们汇聚到一个可浏览、可
-          互动、可追溯的社区里，让校园分享更有秩序。
+          目前校园发帖互动依托校园墙，QQ，微信等等，不统一且管理不便，我校百度贴吧热度不高，使用人数少且无法客制化。CampusHub 想把它们汇聚到一个可浏览、可互动、可追溯的网页里，让校园分享更有秩序。
         </p>
         <div class="card">
           <ul class="list">
             <li>轻松浏览与发现：分类、标签、关键词搜索，以及按最新 / 热门 / 推荐多种方式排序。</li>
-            <li>自由表达：发布帖子、上传附件，内容沉淀下来随时可查。</li>
+            <li>自由表达：发布帖子、上传附件，实现主流发帖功能。</li>
             <li>热闹的互动：评论、楼中楼回复、点赞与收藏，让讨论更有温度。</li>
-            <li>专属记录中心：浏览历史、我的内容，以及头像与背景图等个人设置。</li>
+            <li>专属记录中心：各类历史记录、我的内容，以及头像与背景图等个人设置。</li>
           </ul>
         </div>
       </section>
@@ -304,11 +356,11 @@
         <div class="feature-grid">
           <div class="feature">
             <h3>用户与认证</h3>
-            <p>注册、登录、个人信息管理，使用 JWT 保障账号安全。</p>
+            <p>实现注册、登录、个人信息管理，用户和管理员权限区分。</p>
           </div>
           <div class="feature">
             <h3>帖子核心</h3>
-            <p>发布、删除、筛选、搜索，支持附件上传与下载，列表多因子排序。</p>
+            <p>发布、删除、筛选、搜索，支持附件上传与下载，列表筛选排序。</p>
           </div>
           <div class="feature">
             <h3>互动系统</h3>
@@ -316,7 +368,7 @@
           </div>
           <div class="feature">
             <h3>记录中心</h3>
-            <p>浏览历史、我的内容、头像与背景图设置，以及收获统计。</p>
+            <p>历史记录、我的内容、头像，背景图与安全设置，信息统计。</p>
           </div>
         </div>
       </section>
@@ -347,14 +399,69 @@
         </div>
         <div class="card">
           <p class="section__desc">
-            这是短学期课程里由 5 名成员（4 名开发 + 1 名 PM）从零协作开发的实践项目，旨在用一套
-            清晰的契约（接口协议、数据库设计、统一设计变量）把多人协作的复杂度降到最低。
+            本项目由 5 名成员协作开发，采用全员按功能和模块全栈开发的模式，旨在用一套清晰的契约（接口协议、数据库设计、统一设计变量）把多人协作的复杂度降到最低。
           </p>
         </div>
       </section>
 
+      <section class="section">
+        <div class="section__heading">
+          <h2>源码与文档</h2>
+        </div>
+        <p class="section__desc">
+          本项目开源于 GitHub（仓库开发代号 PostWEB），以下为项目源码与相关文档的直达链接。
+        </p>
+        <div class="doc-grid">
+          <a
+            class="doc-card"
+            href="https://github.com/YangKunYi24320314/postingweb"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <div class="doc-card__title"><span>📦</span>GitHub 仓库</div>
+            <p>PostWEB 完整源码与提交记录，开发代号即此仓库名。</p>
+          </a>
+          <a
+            class="doc-card"
+            href="https://github.com/YangKunYi24320314/postingweb/blob/develop/README.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <div class="doc-card__title"><span>📖</span>README 项目说明</div>
+            <p>项目介绍、快速开始与团队规范。</p>
+          </a>
+          <a
+            class="doc-card"
+            href="https://github.com/YangKunYi24320314/postingweb/blob/develop/AGENTS.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <div class="doc-card__title"><span>🤖</span>AGENTS.md 协作说明</div>
+            <p>给 AI 协作助手的项目说明，帮助快速接手开发。</p>
+          </a>
+          <a
+            class="doc-card"
+            href="https://github.com/YangKunYi24320314/postingweb/tree/develop/devdocs"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <div class="doc-card__title"><span>📐</span>devdocs 契约文档</div>
+            <p>接口协议、数据库设计、OpenAPI 规范。</p>
+          </a>
+          <a
+            class="doc-card"
+            href="https://github.com/YangKunYi24320314/postingweb/tree/develop/docs"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <div class="doc-card__title"><span>🗂️</span>docs 项目文档</div>
+            <p>立项文档、每日日志与提示词记录等交材料。</p>
+          </a>
+        </div>
+      </section>
+
       <footer class="footer">
-        <p>PostWEB · 校园发帖社区 — 欢迎回来看看</p>
+        <p>CampusHub · 校园社区 — 欢迎回来看看</p>
         <p style="margin-top: var(--space-xs)">
           <a href="/">返回首页</a>
         </p>
