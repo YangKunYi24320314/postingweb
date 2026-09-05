@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { View, ChatDotRound, Pointer, ArrowLeft, Search } from '@element-plus/icons-vue'
+import { View, ChatDotRound, ArrowLeft, Search } from '@element-plus/icons-vue'
+import { ThumbsUp } from 'lucide-vue-next'
 import { getUserInfo, getUserPosts } from '../api/user'
 import PostMediaPreview from '../components/PostMediaPreview.vue'
 
@@ -246,7 +247,7 @@ watch(
         <div class="profile-post-card__stats">
           <span><el-icon><View /></el-icon> {{ row.viewCount }}</span>
           <span><el-icon><ChatDotRound /></el-icon> {{ row.commentCount }}</span>
-          <span><el-icon><Pointer /></el-icon> {{ row.likeCount }}</span>
+          <span><el-icon><ThumbsUp /></el-icon> {{ row.likeCount }}</span>
         </div>
       </div>
 

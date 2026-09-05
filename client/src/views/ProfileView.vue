@@ -2,7 +2,8 @@
 import { ref, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { MoreFilled, Edit, View, ChatDotRound, Pointer, Search } from '@element-plus/icons-vue'
+import { MoreFilled, Edit, View, ChatDotRound, Search } from '@element-plus/icons-vue'
+import { ThumbsUp } from 'lucide-vue-next'
 import { getMe, updateProfile, bindContact, changePassword, sendContactCode } from '../api/auth'
 import { saveToken } from '../api/request'
 import { getMyPosts, getMyFavorites, getMyLikes, uploadAvatar, getMeStats, uploadBackground, getMeBackground } from '../api/record'
@@ -504,7 +505,7 @@ onMounted(() => {
         <div class="profile-post-card__stats">
           <span><el-icon><View /></el-icon> {{ row.viewCount }}</span>
           <span><el-icon><ChatDotRound /></el-icon> {{ row.commentCount }}</span>
-          <span><el-icon><Pointer /></el-icon> {{ row.likeCount }}</span>
+          <span><el-icon><ThumbsUp /></el-icon> {{ row.likeCount }}</span>
         </div>
       </div>
 

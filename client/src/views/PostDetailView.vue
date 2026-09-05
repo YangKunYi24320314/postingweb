@@ -4,7 +4,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Pointer } from '@element-plus/icons-vue'
+import { View } from '@element-plus/icons-vue'
 import { getPostById, deletePost } from '../api/post'
 import { getComments, createComment } from '../api/comments'
 import { reportView } from '../api/record'
@@ -333,7 +333,7 @@ onMounted(async () => {
 
         <div class="detail-card__stats">
           <span
-            ><el-icon><Pointer /></el-icon> 浏览 {{ post.viewCount }}</span
+            ><el-icon><View /></el-icon> 浏览 {{ post.viewCount }}</span
           >
           <InteractionButtons
             :post-id="post.id"

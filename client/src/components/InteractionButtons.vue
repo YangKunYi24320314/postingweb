@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ChatRound, Pointer, Star, StarFilled } from '@element-plus/icons-vue'
+import { Star, StarFilled } from '@element-plus/icons-vue'
+import { ThumbsUp } from 'lucide-vue-next'
 import {
   favoritePost,
   likeComment,
@@ -179,7 +180,7 @@ function toggleCommentLike() {
     <el-button
       v-if="showPostLike"
       :type="innerLiked ? 'primary' : 'default'"
-      :icon="Pointer"
+      :icon="ThumbsUp"
       :size="size"
       :loading="loadingAction === 'postLike'"
       @click="togglePostLike"
@@ -201,7 +202,7 @@ function toggleCommentLike() {
     <el-button
       v-if="showCommentLike"
       :type="innerLiked ? 'primary' : 'default'"
-      :icon="ChatRound"
+      :icon="ThumbsUp"
       :size="size"
       :loading="loadingAction === 'commentLike'"
       @click="toggleCommentLike"
