@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ChatDotRound, Plus, Search, View } from '@element-plus/icons-vue'
+import { ArrowLeft, ChatDotRound, Plus, Search, View } from '@element-plus/icons-vue'
 import { requestFriend } from '../api/friends'
 import { getHotSearches, getSearchSuggestions, searchPosts, searchUsers } from '../api/search'
 import InteractionButtons from '../components/InteractionButtons.vue'
@@ -231,6 +231,11 @@ function goUser(user) {
   router.push(`/user/${user.id}`)
 }
 
+// 返回帖子广场
+function goPostPage() {
+  router.push('/post-page')
+}
+
 onMounted(() => {
   document.addEventListener('mousedown', handleDocumentMouseDown)
   applyRouteQuery()
@@ -252,6 +257,10 @@ watch(
 
 <template>
   <div class="page-container search-page">
+    <!-- 左上角返回帖子广场 -->
+    <div class="search-page__topbar">
+      <el-button :icon="ArrowLeft" plain round @click="goPostPage">返回帖子广场</el-button>
+    </div>
     <section class="search-hero">
       <div ref="searchBoxRef" class="search-box">
         <el-input
@@ -440,6 +449,10 @@ watch(
 <style scoped>
 .search-page {
   max-width: 1120px;
+}
+
+.search-page__topbar {
+  margin-bottom: var(--space-md);
 }
 
 .search-hero {
