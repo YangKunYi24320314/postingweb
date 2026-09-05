@@ -5,7 +5,7 @@ import { Document, EditPen } from '@element-plus/icons-vue'
 import { getPostList } from '../api/post'
 
 const router = useRouter()
-const activeRank = ref('recommend')
+const activeRank = ref('latest')
 const posts = ref([])
 const loading = ref(false)
 const loadError = ref('')

@@ -22,8 +22,11 @@ test('public user lookup returns a safe public profile and post count', async ()
             username: 'scu123',
             nickname: '校园用户',
             avatar_url: null,
+            background_url: null,
             bio: '喜欢分享校园生活',
             post_count: '3',
+            total_likes: '0',
+            total_favorites: '0',
           },
         ],
       }
@@ -37,8 +40,11 @@ test('public user lookup returns a safe public profile and post count', async ()
     username: 'scu123',
     nickname: '校园用户',
     avatarUrl: null,
+    backgroundUrl: null,
     bio: '喜欢分享校园生活',
     postCount: 3,
+    totalLikes: 0,
+    totalFavorites: 0,
   })
   assert.equal(queries[0].params[0], 12)
 })
