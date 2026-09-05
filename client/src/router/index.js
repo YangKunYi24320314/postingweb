@@ -27,6 +27,24 @@ const routes = [
         meta: { title: '帖子广场' },
       },
       {
+        path: 'search',
+        name: 'Search',
+        component: () => import('../views/SearchView.vue'),
+        meta: { title: '搜索' },
+      },
+      {
+        path: 'messages',
+        name: 'Messages',
+        component: () => import('../views/MessagesView.vue'),
+        meta: { title: '消息', requiresAuth: true },
+      },
+      {
+        path: 'messages/chat/:friendId',
+        name: 'Chat',
+        component: () => import('../views/ChatView.vue'),
+        meta: { title: '聊天', requiresAuth: true },
+      },
+      {
         path: 'post/:id',
         name: 'PostDetail',
         component: () => import('../views/PostDetailView.vue'),
