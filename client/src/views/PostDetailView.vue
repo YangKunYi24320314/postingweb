@@ -4,7 +4,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { View } from '@element-plus/icons-vue'
+import { View, ArrowLeft } from '@element-plus/icons-vue'
 import { getPostById, deletePost } from '../api/post'
 import { getComments, createComment } from '../api/comments'
 import { reportView } from '../api/record'
@@ -183,14 +183,11 @@ function handleDownload(file) {
   window.open(`/api/attachments/${file.id}/download`, '_blank')
 }
 
-// ===== 返回帖子列表，保留分页页码 =====
+// ===== 返回上一页：有浏览历史就后退；直接输入网址进来则回帖子广场 =====
 const goBack = () => {
-  const fromPage = route.query.page
-  if (fromPage) {
-    // 有来源页码，精准跳回对应分页
-    router.push({ path: '/post-page', query: { page: fromPage } })
+  if (window.history.length > 1) {
+    router.back()
   } else {
-    // 没有来源页码，默认回到第1页
     router.push('/post-page')
   }
 }
@@ -279,7 +276,7 @@ onMounted(async () => {
       <template v-if="post">
         <!-- 返回按钮栏 -->
         <div class="back-bar">
-          <el-button type="primary" text @click="goBack"> ← 返回帖子列表 </el-button>
+          <el-button :icon="ArrowLeft" plain round @click="goBack">返回</el-button>
         </div>
         <div class="detail-card__head">
           <h2 class="detail-card__title">{{ post.title }}</h2>
