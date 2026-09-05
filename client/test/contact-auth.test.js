@@ -8,6 +8,10 @@ const profileView = fs.readFileSync(
   new URL('../src/views/ProfileView.vue', import.meta.url),
   'utf8'
 )
+const securityView = fs.readFileSync(
+  new URL('../src/views/SecurityCenterView.vue', import.meta.url),
+  'utf8'
+)
 
 test('auth api exposes contact binding and password security calls', () => {
   assert.match(authApi, /sendContactCode/)
@@ -24,10 +28,13 @@ test('login view submits identifier and supports password reset entry', () => {
   assert.match(loginView, /手机号和邮箱请绑定后登录/)
 })
 
-test('profile view exposes contact binding and password change controls', () => {
-  assert.match(profileView, /绑定手机号/)
-  assert.match(profileView, /绑定邮箱/)
-  assert.match(profileView, /修改密码/)
-  assert.match(profileView, /phoneBound/)
-  assert.match(profileView, /emailBound/)
+test('security center owns contact binding and password change controls', () => {
+  assert.match(securityView, /绑定手机号/)
+  assert.match(securityView, /绑定邮箱/)
+  assert.match(securityView, /修改密码/)
+  assert.match(securityView, /phoneBound/)
+  assert.match(securityView, /emailBound/)
+  assert.doesNotMatch(profileView, /profile__security/)
+  assert.doesNotMatch(profileView, /绑定手机号/)
+  assert.doesNotMatch(profileView, /绑定邮箱/)
 })

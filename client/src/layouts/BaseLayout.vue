@@ -111,7 +111,7 @@ function handleLogout() {
           </a>
         </nav>
       </div>
-      <div class="site-footer__bottom">校园发帖社区 · 第1组 · © 2026</div>
+      <div class="site-footer__bottom">校园贴吧 · © 2026</div>
     </footer>
   </el-container>
 </template>

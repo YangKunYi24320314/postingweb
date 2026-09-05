@@ -13,6 +13,12 @@ test('home page exposes recommendation, hot, and latest post modes', async () =>
   assert.match(source, /latest/)
 })
 
+test('home page defaults unauthenticated visitors to latest posts', async () => {
+  const source = await readFile(new URL('views/HomeView.vue', root), 'utf8')
+
+  assert.match(source, /const activeRank = ref\('latest'\)/)
+})
+
 test('footer exposes GitHub, team contact, and feedback links', async () => {
   const source = await readFile(new URL('layouts/BaseLayout.vue', root), 'utf8')
 
@@ -21,4 +27,11 @@ test('footer exposes GitHub, team contact, and feedback links', async () => {
   assert.match(source, /帮助/)
   assert.match(source, /建议与投诉/)
   assert.match(source, /contactEmail = '205613196@qq\.com'/)
+})
+
+test('footer copyright omits the group name', async () => {
+  const source = await readFile(new URL('layouts/BaseLayout.vue', root), 'utf8')
+
+  assert.match(source, /校园贴吧 · © 2026/)
+  assert.doesNotMatch(source, /第1组/)
 })

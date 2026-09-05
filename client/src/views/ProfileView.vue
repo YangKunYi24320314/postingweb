@@ -4,8 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { MoreFilled, Edit, View, ChatDotRound, Search } from '@element-plus/icons-vue'
 import { ThumbsUp } from 'lucide-vue-next'
-import { getMe, updateProfile, bindContact, changePassword, sendContactCode } from '../api/auth'
-import { saveToken } from '../api/request'
+import { getMe, updateProfile } from '../api/auth'
 import { getMyPosts, getMyFavorites, getMyLikes, uploadAvatar, getMeStats, uploadBackground, getMeBackground } from '../api/record'
 import RecentHistoryPreview from '../components/RecentHistoryPreview.vue'
 import AvatarCropper from '../components/AvatarCropper.vue'
@@ -51,16 +50,6 @@ const bgCropImageSrc = ref('') // 待裁剪的背景原图
 const bgFileInput = ref(null) // 背景文件选择器
 const uploadingBg = ref(false) // 背景上传中
 const bgLoaded = ref(false) // 背景图是否已加载（用于淡入）
-
-// 绑定联系方式（手机 / 邮箱）
-const contactForms = reactive({ phone: { target: '', code: '' }, email: { target: '', code: '' } })
-const contactSending = reactive({ phone: false, email: false })
-const contactBinding = reactive({ phone: false, email: false })
-const contactCountdown = reactive({ phone: 0, email: 0 })
-
-// 修改密码
-const passwordForm = reactive({ currentPassword: '', newPassword: '', confirmPassword: '' })
-const passwordSaving = ref(false)
 
 // 页签名 → 对应的接口函数
 const fetchers = {
@@ -306,87 +295,6 @@ function closeAvatarPreview() {
   avatarPreviewVisible.value = false
 }
 
-// 验证码发送倒计时
-function startContactCountdown(channel, seconds) {
-  contactCountdown[channel] = seconds
-  const timer = window.setInterval(() => {
-    contactCountdown[channel] -= 1
-    if (contactCountdown[channel] <= 0) window.clearInterval(timer)
-  }, 1000)
-}
-
-// 发送绑定验证码
-async function handleSendContactCode(channel) {
-  const target = contactForms[channel].target.trim()
-  if (!target) {
-    ElMessage.warning(`请输入${channel === 'phone' ? '手机号' : '邮箱'}`)
-    return
-  }
-  if (contactCountdown[channel] > 0) return
-  contactSending[channel] = true
-  try {
-    await sendContactCode({ channel, target })
-    startContactCountdown(channel, 60)
-    ElMessage.success('验证码已发送，请注意查收')
-  } catch (error) {
-    ElMessage.error(error.message || '验证码发送失败')
-  } finally {
-    contactSending[channel] = false
-  }
-}
-
-// 绑定联系方式
-async function handleBindContact(channel) {
-  const form = contactForms[channel]
-  if (!form.target.trim() || !form.code) {
-    ElMessage.warning('请输入联系方式和验证码')
-    return
-  }
-  contactBinding[channel] = true
-  try {
-    const data = await bindContact({
-      channel,
-      target: form.target.trim(),
-      code: form.code,
-    })
-    user.value = data
-    form.target = ''
-    form.code = ''
-    ElMessage.success(`${channel === 'phone' ? '手机号' : '邮箱'}绑定成功`)
-  } catch (error) {
-    ElMessage.error(error.message || '绑定失败')
-  } finally {
-    contactBinding[channel] = false
-  }
-}
-
-// 修改密码
-async function handleChangePassword() {
-  if (!passwordForm.currentPassword || passwordForm.newPassword.length < 6) {
-    ElMessage.warning('请输入当前密码和不少于 6 位的新密码')
-    return
-  }
-  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-    ElMessage.warning('两次输入的新密码不一致')
-    return
-  }
-  passwordSaving.value = true
-  try {
-    const data = await changePassword({
-      currentPassword: passwordForm.currentPassword,
-      newPassword: passwordForm.newPassword,
-    })
-    saveToken(data.token)
-    user.value = data.user
-    Object.assign(passwordForm, { currentPassword: '', newPassword: '', confirmPassword: '' })
-    ElMessage.success('密码修改成功')
-  } catch (error) {
-    ElMessage.error(error.message || '密码修改失败')
-  } finally {
-    passwordSaving.value = false
-  }
-}
-
 onMounted(() => {
   loadList()
   loadMe()
@@ -521,99 +429,6 @@ onMounted(() => {
     </el-card>
 
     <RecentHistoryPreview />
-
-    <!-- 账号安全：绑定联系方式 + 修改密码 -->
-    <el-card shadow="never" class="profile__security">
-      <div class="profile__header">
-        <h2 class="profile__title">账号安全</h2>
-      </div>
-
-      <el-descriptions :column="1" border class="profile__security-summary">
-        <el-descriptions-item label="手机号">
-          {{ user?.phoneBound ? user.phone : '未绑定' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="邮箱">
-          {{ user?.emailBound ? user.email : '未绑定' }}
-        </el-descriptions-item>
-      </el-descriptions>
-
-      <div class="profile__contact-grid">
-        <el-form label-position="top" @submit.prevent="handleBindContact('phone')">
-          <el-form-item label="绑定手机号">
-            <el-input v-model="contactForms.phone.target" placeholder="请输入手机号" />
-          </el-form-item>
-          <el-form-item label="短信验证码">
-            <div class="profile__code-row">
-              <el-input v-model="contactForms.phone.code" maxlength="6" />
-              <el-button
-                :disabled="contactCountdown.phone > 0"
-                :loading="contactSending.phone"
-                @click="handleSendContactCode('phone')"
-              >
-                {{ contactCountdown.phone > 0 ? `${contactCountdown.phone}s 后重发` : '获取验证码' }}
-              </el-button>
-            </div>
-          </el-form-item>
-          <el-button type="primary" :loading="contactBinding.phone" native-type="submit">
-            绑定手机号
-          </el-button>
-        </el-form>
-
-        <el-form label-position="top" @submit.prevent="handleBindContact('email')">
-          <el-form-item label="绑定邮箱">
-            <el-input v-model="contactForms.email.target" placeholder="请输入邮箱" />
-          </el-form-item>
-          <el-form-item label="邮箱验证码">
-            <div class="profile__code-row">
-              <el-input v-model="contactForms.email.code" maxlength="6" />
-              <el-button
-                :disabled="contactCountdown.email > 0"
-                :loading="contactSending.email"
-                @click="handleSendContactCode('email')"
-              >
-                {{ contactCountdown.email > 0 ? `${contactCountdown.email}s 后重发` : '获取验证码' }}
-              </el-button>
-            </div>
-          </el-form-item>
-          <el-button type="primary" :loading="contactBinding.email" native-type="submit">
-            绑定邮箱
-          </el-button>
-        </el-form>
-      </div>
-
-      <el-form
-        label-position="top"
-        class="profile__password-form"
-        @submit.prevent="handleChangePassword"
-      >
-        <h3>修改密码</h3>
-        <el-form-item label="当前密码">
-          <el-input
-            v-model="passwordForm.currentPassword"
-            type="password"
-            show-password
-            autocomplete="current-password"
-          />
-        </el-form-item>
-        <el-form-item label="新密码">
-          <el-input
-            v-model="passwordForm.newPassword"
-            type="password"
-            show-password
-            autocomplete="new-password"
-          />
-        </el-form-item>
-        <el-form-item label="确认新密码">
-          <el-input
-            v-model="passwordForm.confirmPassword"
-            type="password"
-            show-password
-            autocomplete="new-password"
-          />
-        </el-form-item>
-        <el-button type="primary" :loading="passwordSaving" native-type="submit">修改密码</el-button>
-      </el-form>
-    </el-card>
 
     <!-- 修改个人信息弹窗 -->
     <el-dialog v-model="editVisible" title="修改个人信息" width="420px">
@@ -957,40 +772,6 @@ onMounted(() => {
 .tab-label--primary {
   font-size: 15px;
   font-weight: 700;
-}
-
-/* 账号安全：绑定联系方式 + 修改密码 */
-.profile__security {
-  margin-top: var(--space-md);
-}
-.profile__security-summary {
-  margin-bottom: var(--space-lg);
-}
-.profile__contact-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-lg);
-}
-.profile__code-row {
-  display: flex;
-  width: 100%;
-  gap: var(--space-sm);
-}
-.profile__code-row .el-input {
-  flex: 1;
-}
-.profile__password-form {
-  max-width: 560px;
-  margin-top: var(--space-xl);
-}
-.profile__password-form h3 {
-  margin: 0 0 var(--space-md);
-  font-size: 16px;
-}
-@media (max-width: 720px) {
-  .profile__contact-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* 头像编辑：悬停变暗 + 覆盖修改图标 */
