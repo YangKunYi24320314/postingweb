@@ -94,12 +94,16 @@ function goDetail() {
 }
 .media-preview__item {
   position: relative;
-  width: 76px;
-  height: 76px;
+  width: 228px;
+  height: 228px;
   border-radius: var(--radius-md);
   overflow: hidden;
   cursor: pointer;
   flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+.media-preview__item:not(.media-preview__more):hover {
+  transform: scale(1.05);
 }
 .media-preview__media {
   width: 100%;
@@ -124,7 +128,12 @@ function goDetail() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--brand-primary) 75%, transparent);
+  background: var(--brand-primary);
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+.media-preview__more:hover {
+  opacity: 0.8;
 }
 .media-preview__plus {
   color: var(--bg-white);

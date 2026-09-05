@@ -7,6 +7,7 @@ import { getPostList } from '../api/post'
 import { getCategories } from '../api/catalog'
 import { getHotSearches, getSearchSuggestions } from '../api/search'
 import InteractionButtons from '../components/InteractionButtons.vue'
+import PostMediaPreview from '../components/PostMediaPreview.vue'
 
 const HISTORY_KEY = 'campushub-search-history'
 
@@ -41,6 +42,16 @@ function formatTime(iso) {
   const d = new Date(iso)
   const pad = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// 悬浮预览正文：删除空行后返回剩余文本；视觉 3 行省略交给 CSS
+function contentPreview(content) {
+  if (!content) return ''
+  return content
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .join('\n')
 }
 
 // 根据 id 找到分类名
@@ -305,7 +316,12 @@ watch(
     <!-- 帖子列表 -->
     <el-card v-loading="loading" shadow="never" class="post-list">
       <el-empty v-if="!loading && list.length === 0" description="暂无帖子" />
-      <div v-for="item in list" :key="item.id" class="post-card">
+      <div
+        v-for="(item, index) in list"
+        :key="item.id"
+        class="post-card"
+        :style="{ animationDelay: `${index * 80}ms` }"
+      >
         <div class="post-card__head">
           <!-- 点击标题跳转详情页，携带当前分页页码 -->
           <router-link
@@ -333,6 +349,12 @@ watch(
             {{ tag }}
           </el-tag>
         </div>
+        <!-- 正文预览（常态显示 3 行） -->
+        <div v-if="contentPreview(item.content)" class="post-card__preview">
+          {{ contentPreview(item.content) }}
+        </div>
+        <!-- 附件图片/视频预览 -->
+        <PostMediaPreview :attachments="item.attachments || []" :post-id="item.id" />
         <!-- 数据 + 互动按钮 -->
         <div class="post-card__stats">
           <div class="post-card__counts">
@@ -513,6 +535,17 @@ watch(
 .post-card {
   padding: var(--space-md) 0;
   border-bottom: 1px solid var(--border-color-light);
+  animation: card-fade-in 0.3s ease backwards;
+}
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .post-card:last-child {
   border-bottom: none;
@@ -527,6 +560,10 @@ watch(
   font-size: 17px;
   color: var(--text-primary);
   margin: 0;
+  transition: color 0.2s ease;
+}
+.post-card:hover .post-card__title {
+  color: var(--brand-primary);
 }
 .post-card__category {
   flex-shrink: 0;
@@ -545,6 +582,18 @@ watch(
   gap: var(--space-xs);
   margin-top: var(--space-sm);
   flex-wrap: wrap;
+}
+.post-card__preview {
+  margin-top: var(--space-sm);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  white-space: pre-line;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
 }
 .post-card__stats {
   display: flex;

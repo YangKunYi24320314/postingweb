@@ -109,6 +109,7 @@ function toPost(row, isDetail = false) {
     title: row.title,
     categoryId: row.category_id,
     categoryName: row.category_name || null,
+    content: row.content, // 列表与详情都返回正文（帖子广场卡片做 3 行预览）
     user: { id: row.user_id, nickname: row.nickname, avatarUrl: row.user_avatar_url || null },
     viewCount: row.view_count,
     likeCount: row.like_count,
@@ -121,9 +122,8 @@ function toPost(row, isDetail = false) {
     isDeleted: row.is_deleted, // 新增：返回帖子删除状态，供前端判断显示还原按钮
     attachments: row.attachments || [],
   }
-  if (isDetail) {
-    post.content = row.content
-  }
+  // 正文现在统一返回，isDetail 参数仅保留以兼容调用方
+  void isDetail
   // tags 由调用方额外查好后塞进来
   post.tags = row.tags || []
   return post
@@ -144,6 +144,32 @@ async function getTagsByPostIds(postIds) {
   result.rows.forEach((row) => {
     if (!map[row.post_id]) map[row.post_id] = []
     map[row.post_id].push(row.name)
+  })
+  return map
+}
+
+// 批量查一组帖子 id 的图片/视频附件（每帖最多 3 个，供帖子广场卡片预览）
+async function getMediaByPostIds(postIds) {
+  if (!postIds.length) return {}
+  const result = await pool.query(
+    `SELECT pa.post_id::int AS post_id, pa.id, pa.file_path, pa.mime_type, pa.original_filename
+     FROM post_attachments pa
+     WHERE pa.post_id = ANY($1::int[])
+       AND (pa.mime_type LIKE 'image/%' OR pa.mime_type LIKE 'video/%')
+     ORDER BY pa.post_id, pa.id`,
+    [postIds]
+  )
+  const map = {}
+  result.rows.forEach((row) => {
+    if (!map[row.post_id]) map[row.post_id] = []
+    if (map[row.post_id].length < 3) {
+      map[row.post_id].push({
+        id: row.id,
+        file_path: row.file_path,
+        mime_type: row.mime_type,
+        original_filename: row.original_filename,
+      })
+    }
   })
   return map
 }
@@ -286,7 +312,7 @@ router.get('/posts', optionalAuth, async (req, res) => {
 
   const listResult = await pool.query(
     `${preferenceSql}
-     SELECT p.id::int, p.user_id::int, p.title, p.category_id::int,
+     SELECT p.id::int, p.user_id::int, p.title, p.content, p.category_id::int,
         p.view_count, p.like_count, p.favorite_count, p.comment_count, p.is_pinned, p.created_at,
         u.id::int AS user_id, u.nickname, u.avatar_url AS user_avatar_url,
         c.name AS category_name,
@@ -303,8 +329,10 @@ router.get('/posts', optionalAuth, async (req, res) => {
   )
 
   const tagsMap = await getTagsByPostIds(listResult.rows.map((r) => r.id))
+  const mediaMap = await getMediaByPostIds(listResult.rows.map((r) => r.id))
   const list = listResult.rows.map((row) => {
     row.tags = tagsMap[row.id] || []
+    row.attachments = mediaMap[row.id] || []
     return toPost(row)
   })
 
