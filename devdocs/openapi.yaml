@@ -726,6 +726,24 @@ paths:
                     properties:
                       data: { type: object, nullable: true, example: null }
 
+  /me/history/{postId}:
+    delete:
+      tags: [记录中心]
+      summary: 删除单条浏览记录
+      parameters:
+        - { name: postId, in: path, required: true, schema: { type: integer }, description: 帖子 id }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { type: object, nullable: true, example: null }
+
   /me/posts:
     get:
       tags: [记录中心]

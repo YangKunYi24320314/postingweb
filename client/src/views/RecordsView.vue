@@ -2,8 +2,8 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, Search } from '@element-plus/icons-vue'
-import { getHistory, clearHistory } from '../api/record'
+import { ArrowLeft, Search, Close } from '@element-plus/icons-vue'
+import { getHistory, clearHistory, deleteHistory } from '../api/record'
 
 const router = useRouter()
 
@@ -65,6 +65,21 @@ watch(keyword, () => {
 
 function goPost(row) {
   router.push(`/post/${row.id}`)
+}
+
+// 删除单条浏览记录
+async function handleDeleteOne(row) {
+  try {
+    await deleteHistory(row.id)
+    ElMessage.success('已删除该条浏览记录')
+    // 如果当前页只剩这一条且不是第一页，删完回上一页，避免出现空页
+    if (list.value.length === 1 && page.value > 1) {
+      page.value -= 1
+    }
+    loadHistory()
+  } catch (err) {
+    ElMessage.error(err.message || '删除失败')
+  }
 }
 
 // 翻页：换页后重新拉数据
@@ -146,6 +161,18 @@ onMounted(() => {
             {{ formatTime(row.viewedAt) }}
           </template>
         </el-table-column>
+        <el-table-column width="48" align="center">
+          <template #default="{ row }">
+            <el-button
+              class="record-delete-btn"
+              text
+              size="small"
+              type="danger"
+              :icon="Close"
+              @click.stop="handleDeleteOne(row)"
+            />
+          </template>
+        </el-table-column>
       </el-table>
 
       <el-pagination
@@ -188,6 +215,15 @@ onMounted(() => {
 }
 :deep(.el-table__row:hover .el-table__cell .cell) {
   transform: translateX(-6px);
+}
+
+/* 单条删除「×」按钮：默认隐藏，悬停行时显示 */
+.record-delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+:deep(.el-table__row:hover .record-delete-btn) {
+  opacity: 1;
 }
 
 .records__topbar {
