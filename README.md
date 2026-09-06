@@ -13,7 +13,6 @@
 2. 帖子核心（发布 / 删除 / 筛选 / 搜索 / 附件上传与下载 / 列表支持多因子排序）
 3. 互动系统（评论 / 楼中楼回复 / 点赞 / 收藏）
 4. 记录中心（浏览历史 / 我的内容 / 头像与背景图设置 / 收获统计）
-5. 推荐（已并入帖子列表 `rank` 排序；独立推荐接口二期可选）
 
 ## 技术栈
 
@@ -32,7 +31,6 @@ postingweb/
 ├── server/      # 后端（Express，独立 npm 包）
 ├── devdocs/     # ★ 契约文档（ER图 / 接口协议 / OpenAPI），唯一权威，勿放开发无关内容
 ├── AGENTS.md    # ★ AI 协作说明书（新 AI 会话先读它）
-└── 2026.9.3模块总结与不足.md  # PM 复盘（非契约，了解历史模块情况用）
 ```
 
 ## 快速开始
@@ -78,7 +76,6 @@ cd server && npm run dev
 | [`devdocs/database-schema.md`](./devdocs/database-schema.md) | ER 图 + 表结构，**唯一表结构权威** |
 | [`devdocs/api-protocol.md`](./devdocs/api-protocol.md) | 接口协议，**唯一接口权威** |
 | [`devdocs/openapi.yaml`](./devdocs/openapi.yaml) | 可直接导入 Apifox 的 OpenAPI 规范 |
-| [`devdocs/development-plan.md`](./devdocs/development-plan.md) | 分工 + 排期 + 边界规则（开工必看） |
 | [`AGENTS.md`](./AGENTS.md) | 给 AI 助手的项目说明 |
 
 ---
