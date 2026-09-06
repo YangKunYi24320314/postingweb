@@ -350,6 +350,13 @@ router.get('/posts/:id', optionalAuth, async (req, res) => {
   const isAdmin = req.user && req.user.role === 'admin'
   const post = await findPost(postId, req.userId, true, isAdmin)
   if (!post) {
+    // 区分"帖子不存在"与"帖子已删除"：非管理员查看已删除帖子时返回"未启用"
+    if (!isAdmin) {
+      const raw = await pool.query('SELECT is_deleted FROM posts WHERE id = $1', [postId])
+      if (raw.rowCount > 0 && raw.rows[0].is_deleted) {
+        return fail(res, CODE.NOT_FOUND, '帖子未启用', 404)
+      }
+    }
     return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
   }
   return ok(res, post)
@@ -432,8 +439,11 @@ router.put('/posts/:id', auth, async (req, res) => {
   const existing = await pool.query('SELECT id, user_id, is_deleted FROM posts WHERE id = $1', [
     postId,
   ])
-  if (existing.rowCount === 0 || existing.rows[0].is_deleted) {
+  if (existing.rowCount === 0) {
     return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
+  }
+  if (existing.rows[0].is_deleted) {
+    return fail(res, CODE.NOT_FOUND, '帖子未启用', 404)
   }
   if (existing.rows[0].user_id !== req.userId) {
     return fail(res, CODE.FORBIDDEN, '只能编辑自己的帖子', 403)
@@ -495,8 +505,11 @@ router.delete('/posts/:id', auth, async (req, res) => {
   const existing = await pool.query('SELECT id, user_id, is_deleted FROM posts WHERE id = $1', [
     postId,
   ])
-  if (existing.rowCount === 0 || existing.rows[0].is_deleted) {
+  if (existing.rowCount === 0) {
     return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
+  }
+  if (existing.rows[0].is_deleted) {
+    return fail(res, CODE.NOT_FOUND, '帖子未启用', 404)
   }
 
   // 权限校验：作者本人 或 管理员

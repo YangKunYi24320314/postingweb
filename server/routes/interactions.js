@@ -9,19 +9,26 @@ function isPositiveId(value) {
   return Number.isInteger(Number(value)) && Number(value) > 0
 }
 
-async function ensurePostExists(client, postId) {
+// 检查帖子是否可操作，返回三种状态：
+// 'ok' 可用 / 'deleted' 已删除（未启用）/ 'missing' 不存在或状态异常
+async function getPostState(client, postId) {
   const result = await client.query(
     `
-      SELECT id
+      SELECT is_deleted
       FROM posts
       WHERE id = $1
-        AND is_deleted = false
         AND status = 1
     `,
     [postId]
   )
 
-  return result.rowCount > 0
+  if (result.rowCount === 0) {
+    return 'missing'
+  }
+  if (result.rows[0].is_deleted) {
+    return 'deleted'
+  }
+  return 'ok'
 }
 
 async function ensureCommentExists(client, commentId) {
@@ -74,8 +81,9 @@ router.post('/posts/:id/like', auth, async (req, res, next) => {
 
   try {
     const data = await withTransaction(async (client) => {
-      if (!(await ensurePostExists(client, postId))) {
-        return { notFound: true }
+      const postState = await getPostState(client, postId)
+      if (postState !== 'ok') {
+        return { postState }
       }
 
       const insertResult = await client.query(
@@ -111,8 +119,11 @@ router.post('/posts/:id/like', auth, async (req, res, next) => {
       }
     })
 
-    if (data.notFound) {
+    if (data.postState === 'missing') {
       return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
+    }
+    if (data.postState === 'deleted') {
+      return fail(res, CODE.NOT_FOUND, '帖子未启用', 404)
     }
 
     if (data.conflict) {
@@ -135,8 +146,9 @@ router.delete('/posts/:id/like', auth, async (req, res, next) => {
 
   try {
     const data = await withTransaction(async (client) => {
-      if (!(await ensurePostExists(client, postId))) {
-        return { notFound: true }
+      const postState = await getPostState(client, postId)
+      if (postState !== 'ok') {
+        return { postState }
       }
 
       const deleteResult = await client.query(
@@ -168,8 +180,11 @@ router.delete('/posts/:id/like', auth, async (req, res, next) => {
       }
     })
 
-    if (data.notFound) {
+    if (data.postState === 'missing') {
       return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
+    }
+    if (data.postState === 'deleted') {
+      return fail(res, CODE.NOT_FOUND, '帖子未启用', 404)
     }
 
     return ok(res, data)
@@ -188,8 +203,9 @@ router.post('/posts/:id/favorite', auth, async (req, res, next) => {
 
   try {
     const data = await withTransaction(async (client) => {
-      if (!(await ensurePostExists(client, postId))) {
-        return { notFound: true }
+      const postState = await getPostState(client, postId)
+      if (postState !== 'ok') {
+        return { postState }
       }
 
       const insertResult = await client.query(
@@ -225,8 +241,11 @@ router.post('/posts/:id/favorite', auth, async (req, res, next) => {
       }
     })
 
-    if (data.notFound) {
+    if (data.postState === 'missing') {
       return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
+    }
+    if (data.postState === 'deleted') {
+      return fail(res, CODE.NOT_FOUND, '帖子未启用', 404)
     }
 
     if (data.conflict) {
@@ -249,8 +268,9 @@ router.delete('/posts/:id/favorite', auth, async (req, res, next) => {
 
   try {
     const data = await withTransaction(async (client) => {
-      if (!(await ensurePostExists(client, postId))) {
-        return { notFound: true }
+      const postState = await getPostState(client, postId)
+      if (postState !== 'ok') {
+        return { postState }
       }
 
       const deleteResult = await client.query(
@@ -282,8 +302,11 @@ router.delete('/posts/:id/favorite', auth, async (req, res, next) => {
       }
     })
 
-    if (data.notFound) {
+    if (data.postState === 'missing') {
       return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
+    }
+    if (data.postState === 'deleted') {
+      return fail(res, CODE.NOT_FOUND, '帖子未启用', 404)
     }
 
     return ok(res, data)

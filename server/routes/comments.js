@@ -49,11 +49,12 @@ router.get('/posts/:id/comments', optionalAuth, async (req, res) => {
     return fail(res, CODE.PARAM_ERROR, '帖子 id 不合法')
   }
 
-  const post = await pool.query('SELECT id FROM posts WHERE id = $1 AND is_deleted = false', [
-    postId,
-  ])
+  const post = await pool.query('SELECT is_deleted FROM posts WHERE id = $1', [postId])
   if (post.rowCount === 0) {
     return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
+  }
+  if (post.rows[0].is_deleted) {
+    return fail(res, CODE.NOT_FOUND, '帖子未启用', 404)
   }
 
   const result = await pool.query(
@@ -85,11 +86,12 @@ router.post('/posts/:id/comments', auth, async (req, res) => {
     return fail(res, CODE.PARAM_ERROR, '评论内容不能为空')
   }
 
-  const post = await pool.query('SELECT id FROM posts WHERE id = $1 AND is_deleted = false', [
-    postId,
-  ])
+  const post = await pool.query('SELECT is_deleted FROM posts WHERE id = $1', [postId])
   if (post.rowCount === 0) {
     return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
+  }
+  if (post.rows[0].is_deleted) {
+    return fail(res, CODE.NOT_FOUND, '帖子未启用', 404)
   }
 
   // 楼中楼：回帖必须存在，且属于同一个帖子
