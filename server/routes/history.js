@@ -42,12 +42,13 @@ router.post('/posts/:id/view', auth, async (req, res) => {
     return fail(res, CODE.PARAM_ERROR, '帖子 id 不合法')
   }
 
-  // 先确认帖子存在且未被删除（软删除的帖子不算）
-  const post = await pool.query('SELECT id FROM posts WHERE id = $1 AND is_deleted = false', [
-    postId,
-  ])
+  // 先确认帖子存在：不存在与"已删除(未启用)"返回不同提示
+  const post = await pool.query('SELECT is_deleted FROM posts WHERE id = $1', [postId])
   if (post.rowCount === 0) {
     return fail(res, CODE.NOT_FOUND, '帖子不存在', 404)
+  }
+  if (post.rows[0].is_deleted) {
+    return fail(res, CODE.NOT_FOUND, '帖子未启用', 404)
   }
 
   // 事务：下面两条写操作必须"要么都成功、要么都不做"，

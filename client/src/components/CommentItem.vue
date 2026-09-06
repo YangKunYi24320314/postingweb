@@ -2,6 +2,7 @@
 // 单条评论组件：显示 + 点赞 + 回复 + 编辑 + 删除。
 // 通过 name 声明可以自身引用自己（实现"楼中楼"无限嵌套回复）。
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import InteractionButtons from './InteractionButtons.vue'
 import { createComment, deleteComment, updateComment } from '../api/comments'
@@ -25,6 +26,14 @@ const props = defineProps({
 
 // 通知父级刷新（发表回复/删除/编辑后，让父级重新拉取最新评论和帖子计数）
 const emit = defineEmits(['reload'])
+
+const router = useRouter()
+
+// 点击评论者头像/昵称 → 跳转到该用户主页
+function goUser() {
+  const id = Number(props.comment.user?.id)
+  if (id) router.push(`/user/${id}`)
+}
 
 const saving = ref(false)
 const replyOpen = ref(false)
@@ -125,13 +134,18 @@ function forwardReload() {
 
 <template>
   <div class="comment">
-    <el-avatar :size="36" :src="comment.user?.avatarUrl || undefined" class="comment__avatar">
+    <el-avatar
+      :size="36"
+      :src="comment.user?.avatarUrl || undefined"
+      class="comment__avatar"
+      @click="goUser"
+    >
       {{ comment.user?.nickname?.[0] || '?' }}
     </el-avatar>
 
     <div class="comment__body">
       <div class="comment__head">
-        <span class="comment__name">{{ comment.user?.nickname || '匿名用户' }}</span>
+        <span class="comment__name" @click="goUser">{{ comment.user?.nickname || '匿名用户' }}</span>
         <span class="comment__time">{{ formatTime(comment.createdAt) }}</span>
       </div>
 
@@ -206,6 +220,7 @@ function forwardReload() {
   flex-shrink: 0;
   background: var(--brand-primary);
   color: var(--bg-white);
+  cursor: pointer;
 }
 
 .comment__body {
@@ -223,6 +238,11 @@ function forwardReload() {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.comment__name:hover {
+  color: var(--brand-primary);
 }
 
 .comment__time {

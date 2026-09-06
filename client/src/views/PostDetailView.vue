@@ -324,7 +324,12 @@ onMounted(async () => {
         </div>
         <div class="detail-card__meta">
           <span class="detail-card__author">
-            <el-avatar :size="24" :src="post.user?.avatarUrl || undefined">
+            <el-avatar
+              :size="24"
+              :src="post.user?.avatarUrl || undefined"
+              class="detail-card__avatar"
+              @click="goUser(post.user?.id)"
+            >
               {{ post.user?.nickname?.charAt(0) || 'U' }}
             </el-avatar>
             <span class="detail-card__nickname" @click="goUser(post.user?.id)">{{ post.user?.nickname || '匿名用户' }}</span>
@@ -517,6 +522,9 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
+}
+.detail-card__avatar {
+  cursor: pointer;
 }
 .detail-card__nickname {
   cursor: pointer;
