@@ -13,7 +13,6 @@
 2. 帖子核心（发布 / 删除 / 筛选 / 搜索 / 附件上传与下载 / 列表支持多因子排序）
 3. 互动系统（评论 / 楼中楼回复 / 点赞 / 收藏）
 4. 记录中心（浏览历史 / 我的内容 / 头像与背景图设置 / 收获统计）
-5. 推荐（已并入帖子列表 `rank` 排序；独立推荐接口二期可选）
 
 ## 技术栈
 
@@ -32,7 +31,6 @@ postingweb/
 ├── server/      # 后端（Express，独立 npm 包）
 ├── devdocs/     # ★ 契约文档（ER图 / 接口协议 / OpenAPI），唯一权威，勿放开发无关内容
 ├── AGENTS.md    # ★ AI 协作说明书（新 AI 会话先读它）
-└── 2026.9.3模块总结与不足.md  # PM 复盘（非契约，了解历史模块情况用）
 ```
 
 ## 快速开始
@@ -78,7 +76,6 @@ cd server && npm run dev
 | [`devdocs/database-schema.md`](./devdocs/database-schema.md) | ER 图 + 表结构，**唯一表结构权威** |
 | [`devdocs/api-protocol.md`](./devdocs/api-protocol.md) | 接口协议，**唯一接口权威** |
 | [`devdocs/openapi.yaml`](./devdocs/openapi.yaml) | 可直接导入 Apifox 的 OpenAPI 规范 |
-| [`devdocs/development-plan.md`](./devdocs/development-plan.md) | 分工 + 排期 + 边界规则（开工必看） |
 | [`AGENTS.md`](./AGENTS.md) | 给 AI 助手的项目说明 |
 
 ---
@@ -104,7 +101,7 @@ cd server && npm run dev
 - 错误码约定：`1001` 参数错 / `1002` 未登录 / `1003` 无权限 / `1005` 冲突重复 / `5000` 服务器错（`0` 成功）。
 - **开发必须严格对照 Apifox，不允许私自改字段名。**
 
-### 四、AI 辅助开发与代码规范（重点协调）
+### 四、AI 辅助开发与代码规范
 
 - 全员在编辑器装 **Prettier + ESLint**，设置**保存时自动格式化**；提交前必须格式化，避免 AI 生成的缩进/引号不统一导致 Git 冲突。
 - **不要直接复制粘贴 AI 生成的整段代码**：让 AI 写代码时要加中文注释，且你自己必须能向队友解释这段代码在做什么。
@@ -121,4 +118,4 @@ cd server && npm run dev
 2. **用全局设计变量**：禁止在 `.vue` 里写死颜色，只用 `src/styles/tokens.css` 里的 `var(--...)`。
 3. **统一 AI 提示词模板**（复制给 AI）：
    > "请用 Vue 3 + Element Plus 帮我写这个组件。要求：只用 `el-` 开头组件（如 `el-card`）；样式用 scoped style，只用全局 CSS 变量（如 `var(--brand-primary)`、`var(--space-md)`）；不写内联样式；注释用中文，简单清晰。"
-4. **锁定布局骨架**：直接套用 PM 写的 `BaseLayout.vue`，不允许自己重新搭框架。
+4. **锁定布局骨架**：直接套用 `BaseLayout.vue`，不允许自己重新搭框架。
